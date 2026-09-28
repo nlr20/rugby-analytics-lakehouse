@@ -1,0 +1,9 @@
+name: rugby_analytics
+version: '0.1.0'
+config-version: 2
+profile: rugby_analytics
+model-paths: [models]
+models:
+  rugby_analytics:
+    +materialized: table
+

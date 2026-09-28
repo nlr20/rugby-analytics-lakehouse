@@ -1,0 +1,2 @@
+"""Rugby analytics pipeline."""
+

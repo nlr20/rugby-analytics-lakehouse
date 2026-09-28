@@ -6,7 +6,7 @@ import pytest
 
 from rugby_lakehouse.pipeline import quality, run, summary
 from rugby_lakehouse.landing import write_landing_file
-from rugby_lakehouse.transform import normalize_match
+from rugby_lakehouse.transform import TRANSFORM_VERSION, normalize_match
 
 
 @pytest.fixture
@@ -90,4 +90,5 @@ def test_landing_file_keeps_raw_and_normalized_match(fixture_match, tmp_path):
     assert envelope["raw"] == fixture_match
     assert envelope["match"]["home_score"] == 7
     assert envelope["match"]["source_hash"] == normalize_match(fixture_match)["source_hash"]
+    assert envelope["match"]["transform_version"] == TRANSFORM_VERSION
 

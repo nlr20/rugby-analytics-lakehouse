@@ -2,7 +2,7 @@
 
 with ranked as (
     select *, row_number() over (
-        partition by match_id order by ingested_at desc, source_hash desc
+        partition by match_id order by ingested_at desc, transform_version desc, source_hash desc
     ) as version_rank
     from {{ source('silver', 'silver_match_versions') }}
 )

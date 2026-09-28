@@ -47,21 +47,23 @@ matches = source.select("match.*", "ingested_at").drop("players", "scoring_event
 players = source.select(
     F.col("match.match_id").alias("match_id"),
     F.col("match.source_hash").alias("source_hash"),
+    F.col("match.transform_version").alias("transform_version"),
     "ingested_at", F.explode_outer("match.players").alias("player_record"),
 ).where(F.col("player_record").isNotNull()).select(
-    "match_id", "source_hash", "ingested_at", "player_record.*"
+    "match_id", "source_hash", "transform_version", "ingested_at", "player_record.*"
 )
-append_new_versions(players, "silver_player_versions", ["match_id", "source_hash", "side", "jersey"])
+append_new_versions(players, "silver_player_versions", ["match_id", "source_hash", "transform_version", "side", "jersey"])
 
 events = source.select(
     F.col("match.match_id").alias("match_id"),
     F.col("match.source_hash").alias("source_hash"),
+    F.col("match.transform_version").alias("transform_version"),
     "ingested_at", F.explode_outer("match.scoring_events").alias("event_record"),
 ).where(F.col("event_record").isNotNull()).select(
-    "match_id", "source_hash", "ingested_at", "event_record.*"
+    "match_id", "source_hash", "transform_version", "ingested_at", "event_record.*"
 )
-append_new_versions(events, "silver_scoring_versions", ["match_id", "source_hash", "event_id"])
+append_new_versions(events, "silver_scoring_versions", ["match_id", "source_hash", "transform_version", "event_id"])
 
 # Commit the match version last: Gold only sees versions whose child rows loaded.
-append_new_versions(matches, "silver_match_versions", ["match_id", "source_hash"])
+append_new_versions(matches, "silver_match_versions", ["match_id", "source_hash", "transform_version"])
 

@@ -72,5 +72,6 @@ def normalize_match(raw: dict) -> dict:
         "players": players,
         "scoring_events": scoring_events,
         "source_hash": digest(raw),
+        "transform_version": TRANSFORM_VERSION,
     }
 

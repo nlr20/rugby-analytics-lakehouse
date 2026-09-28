@@ -13,8 +13,14 @@ rugby-lakehouse prepare-landing --source-ref c2de981ddcbcf2362fdc5719eefa6d91727
 
 This validates the 151-match snapshot, derives match and event fields, and writes `data/landing/matches.jsonl`. Each line contains both the unchanged upstream `raw` record and a normalized `match` record. The file and all generated data are ignored by Git. To use an already-downloaded snapshot without network access, add `--input path/to/source-snapshot.json`.
 
-## Workspace step pending verification
+## Workspace steps pending verification
 
-Create a managed volume in a catalog and schema where you have write access, then upload `data/landing/matches.jsonl` through Databricks Catalog Explorer. The [Databricks volume upload instructions](https://docs.databricks.com/aws/en/ingestion/file-upload/) describe the UI. The next step is to run and verify the Delta ingestion job against the uploaded volume path; the Azure-specific job under `cloud/databricks/` cannot read this AWS-hosted Free Edition workspace's volume without adaptation.
+1. In Catalog Explorer, create the `rugby_analytics` schema under the `workspace` catalog. Leave managed storage at its default.
+2. Select `workspace.rugby_analytics`, then choose **Create > Volume**. Name it `landing`, choose **Managed**, and leave its storage location at the default.
+3. Upload `data/landing/matches.jsonl` to the volume. The destination path should be `/Volumes/workspace/rugby_analytics/landing/matches.jsonl`. See the [Databricks volume upload instructions](https://docs.databricks.com/aws/en/volumes/volume-files).
+4. Import [`ingest_notebook.py`](ingest_notebook.py) into your Databricks workspace as a notebook. The first-line marker tells Databricks to recognize it as a Python notebook; see [notebook import instructions](https://docs.databricks.com/aws/en/notebooks/notebook-export-import).
+5. Run the notebook on Free Edition serverless compute. Its default widgets target the path above. On the first run it should report 151 source matches, 151 new match versions, 151 current matches, and zero score discrepancies. A repeated run of the same file should report zero new match versions.
+
+The notebook writes managed Delta tables in `workspace.rugby_analytics`. It has not yet run in this workspace, so the expected results above are verification targets rather than a claim of completed deployment. The Azure-specific job under `cloud/databricks/` cannot read this AWS-hosted Free Edition workspace's volume without adaptation.
 
 Free Edition has serverless usage quotas; the workspace can pause compute when a quota is reached. The [Free Edition limits](https://docs.databricks.com/aws/en/getting-started/free-edition-limitations) describe those limits.

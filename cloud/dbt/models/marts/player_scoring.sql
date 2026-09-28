@@ -3,6 +3,7 @@ with current_events as (
     from {{ source('silver', 'silver_scoring_versions') }} e
     join {{ ref('stg_latest_matches') }} m
       on e.match_id = m.match_id and e.source_hash = m.source_hash
+     and e.transform_version = m.transform_version
     where e.player is not null
 )
 select season, sha2(team, 256) as team_id, player,

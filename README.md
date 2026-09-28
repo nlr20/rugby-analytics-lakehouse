@@ -2,7 +2,7 @@
 
 **Question:** What can match and player scoring data tell us about team performance across a United Rugby Championship season?
 
-This portfolio project starts with a reproducible, working local pipeline for the 2024–25 rugby union season. It tracks source corrections at match level and produces team-season metrics. Airflow, Azure storage, Databricks/Delta, and dbt implementation files are included under [`cloud/`](cloud/README.md), but those components are **not yet deployed or integration tested**.
+This portfolio project starts with a reproducible local pipeline for the 2024–25 rugby union season. It tracks source corrections at match level and produces team-season metrics. Bronze/Silver Delta ingestion has also been run on Databricks Free Edition, including a repeat run that inserted no duplicate match versions. Gold, dbt, Airflow, and Azure work remains in progress; see [`cloud/`](cloud/README.md).
 
 ## What works now
 
@@ -40,7 +40,7 @@ For an offline input file, use `rugby-lakehouse sync --input path/to/matches.jso
 
 For a fixed upstream version, use `rugby-lakehouse sync --source-ref c2de981ddcbcf2362fdc5719eefa6d9172740850`. The default `master` ref checks for later source corrections.
 
-To prepare a validated JSONL file for a manual Databricks Free Edition upload, run `rugby-lakehouse prepare-landing --source-ref c2de981ddcbcf2362fdc5719eefa6d9172740850`. The ignored landing filename includes the season and a snapshot hash, such as `data/landing/urc-2024-25-47ce925d0db9.jsonl`. This preserves distinct snapshots when upstream corrects the same season. See the [Free Edition setup](cloud/free-edition/README.md); that workspace path has not yet been deployed or verified.
+To prepare a validated JSONL file for a manual Databricks Free Edition upload, run `rugby-lakehouse prepare-landing --source-ref c2de981ddcbcf2362fdc5719eefa6d9172740850`. The ignored landing filename includes the season and a snapshot hash, such as `data/landing/urc-2024-25-47ce925d0db9.jsonl`. This preserves distinct snapshots when upstream corrects the same season. See the [Free Edition setup](cloud/free-edition/README.md) for the verified ingestion run and remaining Gold step.
 
 ## Data model
 
@@ -68,10 +68,9 @@ On 28 September 2026, the upstream 2024–25 snapshot contained 151 fixtures and
 
 The no-cost development path uses Databricks Free Edition managed storage and a local upload. The Azure storage integration below remains a separate deployment draft because the available Free Edition workspace is hosted on AWS.
 
-1. Deploy the Airflow DAG to land validated snapshot envelopes in Azure storage.
-2. Run the Databricks job to ingest distinct match versions into Bronze and Silver Delta tables.
-3. Run and test the dbt Gold marts on Databricks SQL, then add the dbt task to the DAG.
-4. Publish a small dashboard with trend and player scoring questions, then add run observability.
+1. Run and verify Gold marts in Databricks Free Edition, then run and test the dbt models against the same Silver tables.
+2. Publish a small dashboard with team and player scoring questions.
+3. Deploy the Airflow DAG and Azure storage integration when a compatible, affordable workspace is available, then add run observability.
 
-The local pipeline provides a testable contract for that migration. The cloud components and dashboard will be marked implemented only after they run end to end.
+The local pipeline provides a testable contract for that migration. Remaining cloud components and the dashboard will be marked implemented only after they run.
 

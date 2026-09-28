@@ -1,6 +1,6 @@
 # Databricks Free Edition setup
 
-This is the no-cost development path for the available AWS-hosted Databricks Free Edition workspace. It uses Databricks-managed storage; it does not deploy Azure resources. The workspace steps are pending manual verification, so this is not yet an end-to-end deployment claim.
+This is the no-cost development path for the available AWS-hosted Databricks Free Edition workspace. It uses Databricks-managed storage; it does not deploy Azure resources. The Bronze/Silver ingestion has been manually verified in this workspace; the Gold notebook is pending its first run.
 
 ## Prepare the landing file locally
 
@@ -15,14 +15,15 @@ This validates the 151-match snapshot, derives match and event fields, and write
 
 The current transform handles **2024–25 only**. Adding another season also requires parameterizing the season in the fixture identity and validating the new source file; the filename convention alone does not add multi-season processing.
 
-## Workspace steps pending verification
+## Workspace steps
 
 1. In Catalog Explorer, create the `rugby_analytics` schema under the `workspace` catalog. Leave managed storage at its default.
 2. Select `workspace.rugby_analytics`, then choose **Create > Volume**. Name it `landing`, choose **Managed**, and leave its storage location at the default.
 3. Upload `data/landing/urc-2024-25-47ce925d0db9.jsonl` to the volume. The destination path should be `/Volumes/workspace/rugby_analytics/landing/urc-2024-25-47ce925d0db9.jsonl`. See the [Databricks volume upload instructions](https://docs.databricks.com/aws/en/volumes/volume-files).
 4. Import [`ingest_notebook.py`](ingest_notebook.py) into your Databricks workspace as a notebook. The first-line marker tells Databricks to recognize it as a Python notebook; see [notebook import instructions](https://docs.databricks.com/aws/en/notebooks/notebook-export-import).
-5. Run the notebook on Free Edition serverless compute. Its default widgets target the path above. On the first run it should report 151 source matches, 151 new match versions, 151 current matches, and zero score discrepancies. A repeated run of the same file should report zero new match versions.
+5. Run the notebook on Free Edition serverless compute. Its default widgets target the path above. The first run reported 151 source matches, 151 new match versions, 151 current matches, and zero score discrepancies. A repeat run reported zero new match versions, 151 current matches, and zero score discrepancies (user-reported output, 28 September 2026).
+6. Import [`gold_notebook.py`](gold_notebook.py) as a second notebook and run it on serverless compute. It builds `dim_team`, `fact_match`, `gold_team_season`, and `gold_player_scoring` as managed Delta tables. The final checks compare the number of current matches and the team appearance and scoring totals. This step is pending workspace verification.
 
-The notebook writes managed Delta tables in `workspace.rugby_analytics`. It has not yet run in this workspace, so the expected results above are verification targets rather than a claim of completed deployment. The Azure-specific job under `cloud/databricks/` cannot read this AWS-hosted Free Edition workspace's volume without adaptation.
+The ingestion notebook writes managed Delta tables in `workspace.rugby_analytics`. The Azure-specific job under `cloud/databricks/` cannot read this AWS-hosted Free Edition workspace's volume without adaptation. The dbt models under `cloud/dbt/` remain implementation drafts until they are run against this workspace.
 
 Free Edition has serverless usage quotas; the workspace can pause compute when a quota is reached. The [Free Edition limits](https://docs.databricks.com/aws/en/getting-started/free-edition-limitations) describe those limits.

@@ -4,4 +4,8 @@ __pycache__/
 *.pyc
 data/
 .env
+cloud/dbt/.user.yml
+cloud/dbt/logs/
+cloud/dbt/target/
+cloud/dbt/dbt_packages/
 

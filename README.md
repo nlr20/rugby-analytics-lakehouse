@@ -2,7 +2,7 @@
 
 **Question:** What can match and player scoring data tell us about team performance across a United Rugby Championship season?
 
-This portfolio project starts with a reproducible local pipeline for the 2024–25 rugby union season. It tracks source corrections at match level and produces team-season metrics. Bronze, Silver, and Gold Delta tables have also been built on Databricks Free Edition. A repeated ingestion added no match versions, and the Gold totals reconciled with the current matches. dbt, Airflow, and Azure work remains in progress; see [`cloud/`](cloud/README.md).
+This portfolio project starts with a reproducible local pipeline for the 2024–25 rugby union season. It tracks source corrections at match level and produces team-season metrics. Bronze, Silver, and Gold Delta tables have also been built on Databricks Free Edition. A repeated ingestion added no match versions, the Gold totals reconciled with the current matches, and dbt built five analytical models with 22 passing data tests. Airflow and Azure work remains in progress; see [`cloud/`](cloud/README.md).
 
 ## What works now
 
@@ -68,9 +68,9 @@ On 28 September 2026, the upstream 2024–25 snapshot contained 151 fixtures and
 
 The no-cost development path uses Databricks Free Edition managed storage and a local upload. The Azure storage integration below remains a separate deployment draft because the available Free Edition workspace is hosted on AWS.
 
-1. Run and test the dbt models against the same Silver tables.
-2. Publish a small dashboard with team and player scoring questions.
-3. Deploy the Airflow DAG and Azure storage integration when a compatible, affordable workspace is available, then add run observability.
+1. Publish a small dashboard with team and player scoring questions.
+2. Add a repeatable job for ingestion and dbt, with run observability.
+3. Deploy the Airflow DAG and Azure storage integration when a compatible, affordable workspace is available.
 
 The local pipeline provides a testable contract for that migration. Remaining cloud components and the dashboard will be marked implemented only after they run.
 

@@ -59,3 +59,24 @@ def test_duplicate_fixture_key_rejected(fixture_match, tmp_path):
     with pytest.raises(ValueError, match="duplicate"):
         run([fixture_match, fixture_match], tmp_path / "rugby.sqlite", tmp_path / "bronze")
 
+
+def test_penalty_try_and_transform_upgrade(fixture_match, tmp_path):
+    match = copy.deepcopy(fixture_match)
+    match["home"]["score"] = 7
+    match["home"]["scores"] = [
+        {"minute": 10, "type": "Penalty Try", "player": None, "value": 5}
+    ]
+    db_path = tmp_path / "rugby.sqlite"
+    bronze = tmp_path / "bronze"
+    assert run([match], db_path, bronze)["changed_matches"] == 1
+    assert quality(db_path)["fixtures_with_score_event_discrepancy"] == 0
+    with sqlite3.connect(db_path) as db:
+        assert db.execute("SELECT points FROM silver_scoring_event").fetchone()[0] == 7
+        # Simulate a database processed with the older transform.
+        db.execute("UPDATE silver_match SET transform_version = 1")
+        db.execute("UPDATE silver_scoring_event SET points = 5")
+    assert run([match], db_path, bronze)["changed_matches"] == 1
+    with sqlite3.connect(db_path) as db:
+        assert db.execute("SELECT points FROM silver_scoring_event").fetchone()[0] == 7
+        assert db.execute("SELECT COUNT(*) FROM bronze_event").fetchone()[0] == 1
+

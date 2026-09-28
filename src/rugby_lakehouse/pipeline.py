@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import sqlite3
 
-from .transform import canonical_json, normalize_match
+from .transform import TRANSFORM_VERSION, canonical_json, normalize_match
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS bronze_event (
@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS silver_match (
   round_type TEXT NOT NULL, round_number INTEGER NOT NULL, played_at TEXT NOT NULL,
   home_team TEXT NOT NULL, away_team TEXT NOT NULL,
   home_score INTEGER NOT NULL, away_score INTEGER NOT NULL,
-  stadium TEXT, attendance INTEGER, source_hash TEXT NOT NULL, updated_at TEXT NOT NULL
+  stadium TEXT, attendance INTEGER, source_hash TEXT NOT NULL, updated_at TEXT NOT NULL,
+  transform_version INTEGER NOT NULL DEFAULT 1
 );
 CREATE TABLE IF NOT EXISTS silver_player_appearance (
   match_id TEXT NOT NULL, side TEXT NOT NULL, jersey TEXT NOT NULL,
@@ -107,23 +108,28 @@ def run(matches: list[dict], database: Path, bronze_dir: Path) -> dict[str, int]
     changed = []
     with sqlite3.connect(database) as db:
         db.executescript(SCHEMA)
+        # Existing local databases predate the transform-version column.
+        columns = {row[1] for row in db.execute("PRAGMA table_info(silver_match)")}
+        if "transform_version" not in columns:
+            db.execute("ALTER TABLE silver_match ADD COLUMN transform_version INTEGER NOT NULL DEFAULT 1")
         for raw, match in zip(matches, normalized):
-            current = db.execute("SELECT source_hash FROM silver_match WHERE match_id = ?", (match["match_id"],)).fetchone()
-            if current and current[0] == match["source_hash"]:
+            current = db.execute("SELECT source_hash, transform_version FROM silver_match WHERE match_id = ?", (match["match_id"],)).fetchone()
+            if current and current == (match["source_hash"], TRANSFORM_VERSION):
                 continue
             changed.append((raw, match))
             db.execute("INSERT OR IGNORE INTO bronze_event(match_id, source_hash, ingested_at, payload) VALUES (?, ?, ?, ?)",
                        (match["match_id"], match["source_hash"], ingested_at, canonical_json(raw)))
-            db.execute("""INSERT INTO silver_match VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            db.execute("""INSERT INTO silver_match VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(match_id) DO UPDATE SET
                 played_at=excluded.played_at, home_score=excluded.home_score,
                 away_score=excluded.away_score, stadium=excluded.stadium,
                 attendance=excluded.attendance, source_hash=excluded.source_hash,
+                transform_version=excluded.transform_version,
                 updated_at=excluded.updated_at""",
                        (match["match_id"], match["competition"], match["season"], match["round_type"],
                         match["round_number"], match["played_at"], match["home_team"], match["away_team"],
                         match["home_score"], match["away_score"], match["stadium"], match["attendance"],
-                        match["source_hash"], ingested_at))
+                        match["source_hash"], ingested_at, TRANSFORM_VERSION))
             db.execute("DELETE FROM silver_player_appearance WHERE match_id = ?", (match["match_id"],))
             db.execute("DELETE FROM silver_scoring_event WHERE match_id = ?", (match["match_id"],))
             db.executemany("INSERT INTO silver_player_appearance VALUES (?, ?, ?, ?, ?)",

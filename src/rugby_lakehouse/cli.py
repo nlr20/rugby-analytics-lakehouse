@@ -12,11 +12,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Build the URC analytics lakehouse locally")
     parser.add_argument("command", choices=("sync", "summary", "quality"))
     parser.add_argument("--input", type=Path, help="Local source JSON; sync fetches upstream when omitted")
+    parser.add_argument("--source-ref", default="master", help="Upstream commit SHA for a fixed snapshot (default: master)")
     parser.add_argument("--data-dir", type=Path, default=Path("data"))
     args = parser.parse_args()
     database = args.data_dir / "rugby.sqlite"
     if args.command == "sync":
-        result = run(read_matches(args.input), database, args.data_dir / "bronze")
+        result = run(read_matches(args.input, args.source_ref), database, args.data_dir / "bronze")
     elif args.command == "summary":
         result = summary(database)
     else:

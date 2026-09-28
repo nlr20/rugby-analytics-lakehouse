@@ -19,7 +19,7 @@ The local reference implementation uses Python and SQLite so the incremental and
 
 ## Source and scope
 
-- Source: [transientlunatic/Rugby-Data](https://github.com/transientlunatic/Rugby-Data), `json/celtic-2024-2025.json`, fetched at run time. The upstream project describes its JSON as professional rugby union scoring data. No upstream dataset is committed here.
+- Source: [transientlunatic/Rugby-Data](https://github.com/transientlunatic/Rugby-Data), `json/celtic-2024-2025.json`, fetched at run time. The upstream project describes its JSON as professional rugby union scoring data. The [source audit](docs/source-audit.md) records the observed file version, fingerprint, and reuse status. No upstream dataset is committed here.
 - Coverage: one URC season. Player analysis currently covers lineup appearances and scoring events, not tackles, carries, or full performance statistics.
 - The upstream file is a **snapshot**, not an event feed. Incremental ingestion compares each match's content hash with the latest processed version. This detects late score and lineup corrections when the source is fetched again.
 - The source does not publish a fixture ID in this file. The pipeline derives one from competition, season, phase, round, and both teams. A change to one of those identity fields is treated as a new fixture and needs manual reconciliation.
@@ -38,6 +38,8 @@ python -m pytest -q
 
 For an offline input file, use `rugby-lakehouse sync --input path/to/matches.json`. Generated data stays in the ignored `data/` directory. Re-run `sync` to check for corrections; compare `changed_matches` between runs.
 
+For a fixed upstream version, use `rugby-lakehouse sync --source-ref c2de981ddcbcf2362fdc5719eefa6d9172740850`. The default `master` ref checks for later source corrections.
+
 ## Data model
 
 | Layer | Tables / files | Purpose |
@@ -53,12 +55,12 @@ Gold computes played, wins, draws, points for, and points against from the curre
 - Validate required fields, distinct teams, nonnegative scores, and unique fixture keys before writing.
 - Keep prior source versions in Bronze and upsert the latest version into Silver. On correction, replace the fixture's player and scoring rows, then refresh Gold in one database transaction.
 - Use content hashes for idempotence. The tests exercise repeat ingestion, a late score/date correction, malformed input, and duplicate fixture keys.
-- Report discrepancies between listed scoring events and final scores. These are source-quality signals, not automatic failures: event detail may be incomplete even when a final score is present.
+- Normalize penalty tries to seven points before reconciling scoring events with final scores. The upstream event's `value` is five, while its final score includes the automatic two points. Keep the raw value in Bronze and the normalized value in Silver. A transform version makes existing local databases reprocess the same source snapshot when this rule changes.
 - Use parameterized SQL and keep credentials out of the repository.
 
 ### Observed run
 
-On 28 September 2026, the upstream 2024–25 snapshot contained 151 fixtures and 16 teams. The pipeline produced 6,946 player appearances and 2,396 scoring events. A repeated run found zero changed matches. The quality report flagged 16 fixtures where one or both teams' listed event points differed from the final score; team totals use the final scores.
+On 28 September 2026, the upstream 2024–25 snapshot contained 151 fixtures and 16 teams. The pipeline produced 6,946 player appearances and 2,396 scoring events. A repeated run found zero changed matches. An audit found 16 apparent score discrepancies, all explained by one penalty try per affected fixture; after normalization, the quality report has zero score discrepancies. Team totals use the final scores. See the [source audit](docs/source-audit.md) for the evidence and limitations.
 
 ## Cloud roadmap
 

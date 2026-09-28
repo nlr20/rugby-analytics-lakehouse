@@ -6,6 +6,7 @@ import json
 
 COMPETITION = "United Rugby Championship"
 SEASON = "2024-25"
+TRANSFORM_VERSION = 2
 
 
 def canonical_json(value: object) -> str:
@@ -42,14 +43,18 @@ def normalize_match(raw: dict) -> dict:
             if name:
                 players.append({"side": side, "team": team["team"], "jersey": str(jersey), "player": name.strip()})
         for ordinal, event in enumerate(team.get("scores") or []):
+            event_type = event.get("type")
+            source_points = int(event.get("value") or 0)
+            # A penalty try includes an automatic conversion in the final score.
+            points = 7 if event_type == "Penalty Try" else source_points
             scoring_events.append({
                 "event_id": digest([match_id, side, ordinal])[:24],
                 "side": side,
                 "team": team["team"],
                 "minute": event.get("minute"),
-                "event_type": event.get("type"),
+                "event_type": event_type,
                 "player": event.get("player"),
-                "points": int(event.get("value") or 0),
+                "points": points,
             })
     return {
         "match_id": match_id,

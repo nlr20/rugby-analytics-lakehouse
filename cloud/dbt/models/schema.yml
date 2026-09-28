@@ -7,9 +7,23 @@ sources:
       - name: silver_match_versions
       - name: silver_player_versions
       - name: silver_scoring_versions
+      - name: silver_fixture_versions
+      - name: silver_season_snapshots
 models:
+  - name: stg_current_fixtures
+    columns:
+      - name: match_id
+        tests: [not_null, unique]
+      - name: season
+        tests: [not_null]
+      - name: status
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['completed', 'result_unavailable']
   - name: stg_latest_matches
-    description: Latest validated version of each fixture.
+    description: Completed match version referenced by the current snapshot for its season.
     columns:
       - name: match_id
         tests: [not_null, unique]
@@ -65,5 +79,12 @@ models:
                 to: ref('dim_team')
                 field: team_id
       - name: player
+        tests: [not_null]
+  - name: fixture_schedule
+    description: Current published snapshot of completed fixtures and fixtures whose results are unavailable in the source.
+    columns:
+      - name: match_id
+        tests: [not_null, unique]
+      - name: season
         tests: [not_null]
 

@@ -1,6 +1,11 @@
-SELECT d.team_name, p.player, p.tries, p.recorded_points
-FROM workspace.rugby_dbt.player_scoring p
-JOIN workspace.rugby_dbt.dim_team d ON p.team_id = d.team_id
-WHERE p.season = '2024-25'
-ORDER BY p.tries DESC, p.recorded_points DESC, p.player
-LIMIT 20
+WITH ranked AS (
+  SELECT p.season, d.team_name, p.player, p.tries, p.recorded_points,
+         row_number() OVER (PARTITION BY p.season
+                            ORDER BY p.tries DESC, p.recorded_points DESC, p.player) AS season_rank
+  FROM workspace.rugby_dbt.player_scoring p
+  JOIN workspace.rugby_dbt.dim_team d ON p.team_id = d.team_id
+)
+SELECT season, team_name, player, tries, recorded_points, season_rank
+FROM ranked
+WHERE season_rank <= 20
+ORDER BY season DESC, season_rank

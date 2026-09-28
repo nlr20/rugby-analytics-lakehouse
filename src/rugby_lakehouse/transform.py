@@ -6,7 +6,12 @@ import json
 
 COMPETITION = "United Rugby Championship"
 SEASON = "2024-25"
-TRANSFORM_VERSION = 2
+TRANSFORM_VERSION = 3
+TEAM_ALIASES = {"Emirates Lions": "Lions"}
+
+
+def canonical_team_name(name: str) -> str:
+    return TEAM_ALIASES.get(name.strip(), name.strip())
 
 
 def canonical_json(value: object) -> str:
@@ -17,31 +22,44 @@ def digest(value: object) -> str:
     return hashlib.sha256(canonical_json(value).encode("utf-8")).hexdigest()
 
 
-def normalize_match(raw: dict) -> dict:
+def normalize_match(raw: dict, season: str = SEASON, source_index: int | None = None) -> dict:
     try:
         home, away = raw["home"], raw["away"]
-        home_team, away_team = home["team"].strip(), away["team"].strip()
-        if not home_team or not away_team or home_team == away_team:
-            raise ValueError("Home and away teams must be distinct and nonempty")
+        home_team = canonical_team_name(home["team"])
+        away_team = canonical_team_name(away["team"])
+        if not home_team or not away_team:
+            raise ValueError("Home and away teams must be nonempty")
         played_at = datetime.fromisoformat(raw["date"].replace("Z", "+00:00"))
-        home_score, away_score = int(home["score"]), int(away["score"])
-        if home_score < 0 or away_score < 0:
+        raw_home_score, raw_away_score = home["score"], away["score"]
+        if (raw_home_score is None) != (raw_away_score is None):
+            raise ValueError("Both scores must be present or both null")
+        status = "result_unavailable" if raw_home_score is None else "completed"
+        home_score = None if status == "result_unavailable" else int(raw_home_score)
+        away_score = None if status == "result_unavailable" else int(raw_away_score)
+        if status == "completed" and (home_score < 0 or away_score < 0):
             raise ValueError("Scores cannot be negative")
+        if home_team == away_team and not (status == "result_unavailable" and home_team == "TBC"):
+            raise ValueError("Home and away teams must be distinct")
         round_type = str(raw["round_type"])
         round_number = int(raw["round"])
     except (KeyError, TypeError, AttributeError, ValueError) as exc:
         raise ValueError(f"Invalid match: {exc}") from exc
 
     # The source has no fixture ID. Round, phase and teams survive score/date corrections.
-    identity = [COMPETITION, SEASON, round_type, round_number, home_team, away_team]
+    if "TBC" in (home_team, away_team):
+        if status != "result_unavailable" or source_index is None:
+            raise ValueError("A TBC fixture requires a source index and null scores")
+        identity = [COMPETITION, season, "placeholder", source_index]
+    else:
+        identity = [COMPETITION, season, round_type, round_number, home_team, away_team]
     match_id = digest(identity)[:24]
     players = []
     scoring_events = []
-    for side, team in (("home", home), ("away", away)):
+    for side, team in (("home", home), ("away", away)) if status == "completed" else ():
         for jersey, player in (team.get("lineup") or {}).items():
             name = player.get("name") if isinstance(player, dict) else None
             if name:
-                players.append({"side": side, "team": team["team"], "jersey": str(jersey), "player": name.strip()})
+                players.append({"side": side, "team": canonical_team_name(team["team"]), "jersey": str(jersey), "player": name.strip()})
         for ordinal, event in enumerate(team.get("scores") or []):
             event_type = event.get("type")
             source_points = int(event.get("value") or 0)
@@ -50,7 +68,7 @@ def normalize_match(raw: dict) -> dict:
             scoring_events.append({
                 "event_id": digest([match_id, side, ordinal])[:24],
                 "side": side,
-                "team": team["team"],
+                "team": canonical_team_name(team["team"]),
                 "minute": event.get("minute"),
                 "event_type": event_type,
                 "player": event.get("player"),
@@ -59,7 +77,9 @@ def normalize_match(raw: dict) -> dict:
     return {
         "match_id": match_id,
         "competition": COMPETITION,
-        "season": SEASON,
+        "season": season,
+        "status": status,
+        "source_index": source_index,
         "round_type": round_type,
         "round_number": round_number,
         "played_at": played_at.isoformat(),

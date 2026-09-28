@@ -1,19 +1,16 @@
 # dbt on Databricks Free Edition
 
-These models read the versioned Silver tables in `workspace.rugby_analytics` and build a separate `workspace.rugby_dbt` schema. Keeping them separate lets the dbt output be compared with the verified Gold notebook tables. On 28 September 2026, `dbt debug` connected successfully and `dbt build` completed with five models and 22 passing data tests (27/27 steps, zero warnings or errors).
+dbt reads the current season-snapshot Silver tables in `workspace.rugby_analytics` and builds views and marts in `workspace.rugby_dbt`. The 2024–25 model was run previously: five models and 22 data tests passed. The expanded five-season model has seven models and additional fixture checks; it parses locally but **has not yet been built against the updated workspace tables**.
 
-The committed [`profiles.yml`](profiles.yml) contains no credentials. It uses OAuth browser sign-in, the workspace hostname, and the SQL warehouse HTTP path. Find both values under **SQL Warehouses > Serverless Starter Warehouse > Connection Details**. The hostname should not include `https://`; the HTTP path begins `/sql/1.0/warehouses/`. Do not commit a token or paste one into an issue.
-
-From this directory in PowerShell:
+After [the five-season Databricks ingestion](../free-edition/README.md), set your SQL warehouse connection values and run from this directory:
 
 ```powershell
-python -m pip install dbt-databricks
 $env:DATABRICKS_HOST='your-workspace-hostname'
 $env:DATABRICKS_HTTP_PATH='/sql/1.0/warehouses/your-warehouse-id'
 dbt debug --profiles-dir .
 dbt build --profiles-dir .
 ```
 
-`dbt build` creates the match and team models, then runs key, relationship, and reconciliation tests. The reconciliation test checks that every match contributes two team appearances and that team points equal the match score total. The SQL warehouse uses the Free Edition daily quota; pause if the account reaches its limit.
+The committed [profile](profiles.yml) uses browser OAuth and contains no token. `stg_current_fixtures` selects the latest published snapshot for each season. `stg_latest_matches` keeps only completed fixture versions. Team and match marts, player scoring, and fixture schedule follow. Tests check keys, team relationships, match versus team points, and fixture status reconciliation. One 2022–23 match lacks published scoring events; the score-event exception is surfaced by the ingestion and local audit instead of being treated as a complete event history.
 
-See Databricks' [dbt Core connection guide](https://docs.databricks.com/aws/en/partners/prep/dbt) for OAuth and warehouse connection details.
+See Databricks' [dbt Core connection guide](https://docs.databricks.com/aws/en/partners/prep/dbt) for OAuth and SQL warehouse details. The Free Edition warehouse has usage quotas.

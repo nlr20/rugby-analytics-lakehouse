@@ -7,6 +7,7 @@ import pytest
 from rugby_lakehouse.pipeline import quality, run, summary
 from rugby_lakehouse.landing import write_landing_file
 from rugby_lakehouse.transform import TRANSFORM_VERSION, normalize_match
+from rugby_lakehouse.source import source_file
 
 
 @pytest.fixture
@@ -85,7 +86,7 @@ def test_penalty_try_and_transform_upgrade(fixture_match, tmp_path):
 
 def test_landing_file_keeps_raw_and_normalized_match(fixture_match, tmp_path):
     result = write_landing_file([fixture_match], tmp_path / "landing")
-    target = tmp_path / "landing" / f"urc-2024-25-{result['snapshot_hash'][:12]}.jsonl"
+    target = tmp_path / "landing" / f"urc-2024-25-v{TRANSFORM_VERSION}-{result['snapshot_hash'][:12]}.jsonl"
     assert result["matches"] == 1
     envelope = json.loads(target.read_text(encoding="utf-8"))
     assert envelope["raw"] == fixture_match
@@ -97,4 +98,47 @@ def test_landing_file_keeps_raw_and_normalized_match(fixture_match, tmp_path):
     later = write_landing_file([corrected], tmp_path / "landing")
     assert later["landing_file"] != result["landing_file"]
     assert target.exists()
+
+
+def test_multiple_seasons_and_same_club_alias(fixture_match, tmp_path):
+    db_path = tmp_path / "rugby.sqlite"
+    bronze = tmp_path / "bronze"
+    early = copy.deepcopy(fixture_match)
+    early["home"]["team"] = "Emirates Lions"
+    later = copy.deepcopy(fixture_match)
+    later["home"]["team"] = "Lions"
+    assert run([early], db_path, bronze, "2023-24")["completed_matches"] == 1
+    assert run([later], db_path, bronze, "2024-25")["completed_matches"] == 1
+    with sqlite3.connect(db_path) as db:
+        assert db.execute("SELECT COUNT(*) FROM dim_team WHERE team_name = 'Lions'").fetchone()[0] == 1
+        assert db.execute("SELECT COUNT(*) FROM fact_match").fetchone()[0] == 2
+    assert normalize_match(early, "2023-24")["home_team"] == "Lions"
+    assert normalize_match(early, "2023-24")["match_id"] != normalize_match(later, "2024-25")["match_id"]
+
+
+def test_unreported_fixture_becomes_result_and_placeholder_is_removed(fixture_match, tmp_path):
+    db_path = tmp_path / "rugby.sqlite"
+    bronze = tmp_path / "bronze"
+    pending = copy.deepcopy(fixture_match)
+    pending["home"]["team"] = pending["away"]["team"] = "TBC"
+    pending["home"]["score"] = pending["away"]["score"] = None
+    pending["home"]["lineup"] = pending["away"]["lineup"] = {}
+    pending["home"]["scores"] = pending["away"]["scores"] = []
+    first = run([pending], db_path, bronze, "2025-26")
+    assert first["fixtures_without_result"] == 1
+    assert first["completed_matches"] == 0
+    assert run([pending], db_path, bronze, "2025-26")["changed_matches"] == 0
+    result = run([fixture_match], db_path, bronze, "2025-26")
+    assert result["removed_fixtures"] == 1
+    assert result["completed_matches"] == 1
+    with sqlite3.connect(db_path) as db:
+        assert db.execute("SELECT COUNT(*) FROM silver_fixture").fetchone()[0] == 1
+        assert db.execute("SELECT COUNT(*) FROM silver_match").fetchone()[0] == 1
+        assert db.execute("SELECT COUNT(*) FROM bronze_event").fetchone()[0] == 2
+
+
+def test_season_source_files_are_allowlisted():
+    assert source_file("2025-26") == "json/celtic-2025-2026.json"
+    with pytest.raises(ValueError, match="Unsupported season"):
+        source_file("2026-27")
 

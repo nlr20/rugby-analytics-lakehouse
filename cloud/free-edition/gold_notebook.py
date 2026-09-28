@@ -15,21 +15,42 @@ for name in (catalog, schema):
 namespace = f"`{catalog}`.`{schema}`"
 silver_matches = f"{namespace}.`silver_match_versions`"
 silver_events = f"{namespace}.`silver_scoring_versions`"
-for table in ("silver_match_versions", "silver_scoring_versions"):
+silver_fixtures = f"{namespace}.`silver_fixture_versions`"
+silver_snapshots = f"{namespace}.`silver_season_snapshots`"
+for table in ("silver_match_versions", "silver_scoring_versions", "silver_fixture_versions", "silver_season_snapshots"):
     if not spark.catalog.tableExists(f"{catalog}.{schema}.{table}"):  # noqa: F821
         raise ValueError(f"Run the ingestion notebook first: {catalog}.{schema}.{table} is missing")
 
 spark.sql(f"""
-CREATE OR REPLACE TEMP VIEW rugby_latest_matches AS
-SELECT * EXCEPT (version_rank)
-FROM (
-  SELECT *, row_number() OVER (
-    PARTITION BY match_id
-    ORDER BY ingested_at DESC, transform_version DESC, source_hash DESC
-  ) AS version_rank
-  FROM {silver_matches}
+CREATE OR REPLACE TEMP VIEW rugby_latest_fixtures AS
+WITH latest_snapshots AS (
+  SELECT season, source_snapshot_hash, transform_version FROM (
+    SELECT season, source_snapshot_hash, transform_version,
+           row_number() OVER (PARTITION BY season ORDER BY ingested_at DESC, transform_version DESC, source_snapshot_hash DESC) AS version_rank
+    FROM {silver_snapshots}
+  ) WHERE version_rank = 1
 )
-WHERE version_rank = 1
+SELECT f.* FROM {silver_fixtures} f
+JOIN latest_snapshots s
+  ON f.season = s.season AND f.source_snapshot_hash = s.source_snapshot_hash
+ AND f.transform_version = s.transform_version
+""")
+
+spark.sql(f"""
+CREATE OR REPLACE TEMP VIEW rugby_latest_matches AS
+SELECT m.* FROM {silver_matches} m
+JOIN rugby_latest_fixtures f
+  ON m.match_id = f.match_id
+ AND m.source_hash = f.source_hash
+ AND m.transform_version = f.transform_version
+WHERE f.status = 'completed'
+""")
+
+spark.sql(f"""
+CREATE OR REPLACE TABLE {namespace}.`gold_fixture_schedule` USING DELTA AS
+SELECT match_id, season, status, round_type, round_number, played_at,
+       home_team, away_team, home_score, away_score
+FROM rugby_latest_fixtures
 """)
 
 spark.sql(f"""
@@ -91,6 +112,8 @@ GROUP BY m.season, e.team, e.player
 
 checks = spark.sql(f"""
 SELECT
+  (SELECT count(*) FROM rugby_latest_fixtures) AS current_fixtures,
+  (SELECT count(*) FROM rugby_latest_fixtures WHERE status = 'result_unavailable') AS fixtures_without_result,
   (SELECT count(*) FROM rugby_latest_matches) AS current_matches,
   (SELECT count(*) FROM {namespace}.`fact_match`) AS fact_matches,
   (SELECT count(*) FROM {namespace}.`dim_team`) AS teams,
@@ -100,6 +123,8 @@ SELECT
 """).first()
 if checks.current_matches == 0 or checks.fact_matches != checks.current_matches:
     raise ValueError("Gold fact count does not match the current Silver matches")
+if checks.current_fixtures != checks.current_matches + checks.fixtures_without_result:
+    raise ValueError("Current fixture statuses do not reconcile")
 if checks.team_appearances != 2 * checks.fact_matches:
     raise ValueError("Team-season appearances do not reconcile with match count")
 if checks.team_points_for != checks.match_points:

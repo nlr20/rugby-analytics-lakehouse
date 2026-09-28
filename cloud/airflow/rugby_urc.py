@@ -1,53 +1,67 @@
-"""Airflow DAG for the URC snapshot. Install this package on Airflow workers."""
+"""Manual Airflow backfill: source JSON -> managed Volume -> Delta notebooks -> dbt."""
 
 from datetime import datetime, timedelta, timezone
 import os
+from pathlib import Path
+import subprocess
 
 from airflow.decorators import dag, task
 from airflow.models import Variable
 from airflow.providers.databricks.operators.databricks import DatabricksRunNowOperator
-from azure.storage.blob import BlobServiceClient
+from databricks.sdk import WorkspaceClient
 
-from rugby_lakehouse.source import read_matches
-from rugby_lakehouse.transform import canonical_json, normalize_match
+from rugby_lakehouse.landing import write_landing_file
+from rugby_lakehouse.source import SEASONS, read_matches
 
 
 @dag(
-    dag_id="rugby_urc_2024_25",
-    start_date=datetime(2024, 9, 1, tzinfo=timezone.utc),
-    schedule="0 6 * * *",
+    dag_id="rugby_urc_five_seasons",
+    start_date=datetime(2026, 1, 1, tzinfo=timezone.utc),
+    schedule=None,
     catchup=False,
     max_active_runs=1,
     default_args={"retries": 2, "retry_delay": timedelta(minutes=10)},
-    tags=["rugby", "lakehouse"],
+    tags=["rugby", "lakehouse", "backfill"],
 )
 def rugby_urc_pipeline():
     @task
-    def land_snapshot(logical_date: str) -> str:
-        matches = read_matches()
-        normalized = [normalize_match(match) for match in matches]
-        if len({m["match_id"] for m in normalized}) != len(matches):
-            raise ValueError("Duplicate fixture identity in source snapshot")
-        path = f"rugby/urc-2024-25/{logical_date}/matches.jsonl"
-        body = "\n".join(
-            canonical_json({"raw": raw, "match": match})
-            for raw, match in zip(matches, normalized)
-        ) + "\n"
-        client = BlobServiceClient.from_connection_string(
-            os.environ["AZURE_STORAGE_CONNECTION_STRING"]
-        )
-        client.get_blob_client(
-            container=os.environ["RUGBY_RAW_CONTAINER"], blob=path
-        ).upload_blob(body, overwrite=True)
-        return path
+    def prepare_and_upload(season: str) -> str:
+        matches = read_matches(season=season)
+        landing = write_landing_file(matches, Path(os.environ["RUGBY_LANDING_DIR"]), season)
+        local_file = Path(landing["landing_file"])
+        remote_file = f"/Volumes/workspace/rugby_analytics/landing/{local_file.name}"
+        WorkspaceClient().files.upload_from(remote_file, str(local_file), overwrite=True)
+        return remote_file
 
-    blob_path = land_snapshot("{{ ds }}")
-    DatabricksRunNowOperator(
-        task_id="build_delta_layers",
+    @task
+    def build_dbt() -> None:
+        project = Path(os.environ["RUGBY_REPO_DIR"]) / "cloud" / "dbt"
+        subprocess.run(["dbt", "build", "--profiles-dir", str(project),
+                        "--project-dir", str(project)], check=True)
+
+    previous = None
+    for season in SEASONS:
+        label = season.replace("-", "_")
+        uploaded = prepare_and_upload.override(task_id=f"upload_{label}")(season)
+        ingested = DatabricksRunNowOperator(
+            task_id=f"ingest_{label}",
+            databricks_conn_id="databricks_default",
+            job_id=int(Variable.get("rugby_ingest_job_id", default_var="0")),
+            notebook_params={"landing_path": "{{ ti.xcom_pull(task_ids='upload_" + label + "') }}"},
+            wait_for_termination=True,
+        )
+        if previous is not None:
+            previous >> uploaded
+        uploaded >> ingested
+        previous = ingested
+
+    gold = DatabricksRunNowOperator(
+        task_id="build_gold",
         databricks_conn_id="databricks_default",
-        job_id=int(Variable.get("rugby_databricks_job_id")),
-        notebook_params={"blob_path": blob_path},
+        job_id=int(Variable.get("rugby_gold_job_id", default_var="0")),
+        wait_for_termination=True,
     )
+    previous >> gold >> build_dbt()
 
 
 rugby_urc_pipeline()

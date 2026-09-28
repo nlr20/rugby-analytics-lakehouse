@@ -1,31 +1,33 @@
-# Databricks Free Edition setup
+# Five-season Databricks Free Edition run
 
-This is the no-cost development path for the available AWS-hosted Databricks Free Edition workspace. It uses Databricks-managed storage; it does not deploy Azure resources. The Bronze/Silver ingestion and Gold notebook have been manually verified in this workspace.
+The existing `workspace.rugby_analytics` schema and managed `landing` Volume can be reused. The earlier 2024–25 notebook and dbt runs were verified manually; **this five-season update has not yet run in Databricks**.
 
-## Prepare the landing file locally
+## 1. Prepare and upload
 
-From the repository root, install the package and run:
+From the repository root, run `rugby-lakehouse prepare-landing --all-seasons`. Upload these five ignored local files to the managed Volume using **Catalog > workspace > rugby_analytics > landing > Upload**:
 
-```bash
-python -m pip install -e '.[dev]'
-rugby-lakehouse prepare-landing --source-ref c2de981ddcbcf2362fdc5719eefa6d9172740850
-```
+| Season | Landing file under `data/landing/` |
+| --- | --- |
+| 2021–22 | `urc-2021-22-v3-55a0432d9866.jsonl` |
+| 2022–23 | `urc-2022-23-v3-91d91714ea59.jsonl` |
+| 2023–24 | `urc-2023-24-v3-a5b542793691.jsonl` |
+| 2024–25 | `urc-2024-25-v3-47ce925d0db9.jsonl` |
+| 2025–26 | `urc-2025-26-v3-5792a28de763.jsonl` |
 
-This validates the 151-match snapshot, derives match and event fields, and writes a file named `data/landing/urc-2024-25-<snapshot-hash>.jsonl`. For the audited revision, the exact filename is `urc-2024-25-47ce925d0db9.jsonl`. The season distinguishes future seasons; the hash preserves separate snapshots when the same season is corrected. Each line contains both the unchanged upstream `raw` record and a normalized `match` record. The file and all generated data are ignored by Git. To use an already-downloaded snapshot without network access, add `--input path/to/source-snapshot.json`.
+These names identify the [audited snapshot](../../docs/multiseason-audit.md). If upstream data changes, `prepare-landing` will print new hashes and filenames. Each file goes to `/Volumes/workspace/rugby_analytics/landing/<filename>`.
 
-The current transform handles **2024–25 only**. Adding another season also requires parameterizing the season in the fixture identity and validating the new source file; the filename convention alone does not add multi-season processing.
+## 2. Ingest each season
 
-## Workspace steps
+Update or import [ingest_notebook.py](ingest_notebook.py) in Databricks. Run it on serverless compute once for each of the five paths, setting its `landing_path` widget. Start with 2024–25 so the existing one-season data is migrated to the new fixture-snapshot model; run the other seasons in any order. The run prints source fixtures, new completed match versions, current fixtures, current completed matches, fixtures without a result, and score-event discrepancies.
 
-1. In Catalog Explorer, create the `rugby_analytics` schema under the `workspace` catalog. Leave managed storage at its default.
-2. Select `workspace.rugby_analytics`, then choose **Create > Volume**. Name it `landing`, choose **Managed**, and leave its storage location at the default.
-3. Upload `data/landing/urc-2024-25-47ce925d0db9.jsonl` to the volume. The destination path should be `/Volumes/workspace/rugby_analytics/landing/urc-2024-25-47ce925d0db9.jsonl`. See the [Databricks volume upload instructions](https://docs.databricks.com/aws/en/volumes/volume-files).
-4. Import [`ingest_notebook.py`](ingest_notebook.py) into your Databricks workspace as a notebook. The first-line marker tells Databricks to recognize it as a Python notebook; see [notebook import instructions](https://docs.databricks.com/aws/en/notebooks/notebook-export-import).
-5. Run the notebook on Free Edition serverless compute. Its default widgets target the path above. The first run reported 151 source matches, 151 new match versions, 151 current matches, and zero score discrepancies. A repeat run reported zero new match versions, 151 current matches, and zero score discrepancies (user-reported output, 28 September 2026).
-6. Import [`gold_notebook.py`](gold_notebook.py) as a second notebook and run it on serverless compute. It builds `dim_team`, `fact_match`, `gold_team_season`, and `gold_player_scoring` as managed Delta tables. The verified run reported 151 current matches, 151 match facts, 16 teams, 302 team appearances, and 7,313 points on both sides of the reconciliation (user-reported output, 28 September 2026). The top five teams by wins are Leinster Rugby, Vodacom Bulls, Hollywoodbets Sharks, Glasgow Warriors, and DHL Stormers.
+Expected **after all five files**: 755 current fixtures, 688 current completed matches, 67 fixtures without results, and one score-event discrepancy. Re-running the same file should show zero new match versions. The 2022–23 discrepancy is documented in the audit; investigate any additional discrepancy before using the marts.
 
-The ingestion notebook writes managed Delta tables in `workspace.rugby_analytics`. The Azure-specific job under `cloud/databricks/` cannot read this AWS-hosted Free Edition workspace's volume without adaptation. The dbt models under `cloud/dbt/` have now been built against this workspace with 22 passing tests.
+The notebook writes append-only Bronze raw versions, append-only completed match and player versions, versioned fixture rows, and a season snapshot manifest. The manifest is published after its rows so current-state readers use only a complete season snapshot. Previous 2024–25 Delta data remains in its version tables; a new `transform_version` is added for the five-season design.
 
-The [dbt project](../dbt/README.md) builds into a separate schema so its results can be compared with the notebook Gold tables.
+## 3. Build Gold and dbt
 
-Free Edition has serverless usage quotas; the workspace can pause compute when a quota is reached. The [Free Edition limits](https://docs.databricks.com/aws/en/getting-started/free-edition-limitations) describe those limits.
+Update or import [gold_notebook.py](gold_notebook.py), then run it once. It creates `gold_fixture_schedule`, `dim_team`, `fact_match`, `gold_team_season` and `gold_player_scoring` as managed Delta tables and checks row and point reconciliation. Expected totals after all seasons: 755 fixtures, 67 without a result, 688 match facts and 1,376 team appearances. The previous 2024–25 Gold run alone was verified at 151 facts, 16 teams and 7,313 match points; the five-season totals are not yet verified in Databricks.
+
+Then run `dbt build --profiles-dir .` in [cloud/dbt](../dbt/README.md). The dbt project reads current Silver snapshots and builds an independent set of analytical tables and tests. Lastly, refresh the [dashboard datasets](../dashboard/README.md) or connect [Power BI Desktop](../powerbi/README.md).
+
+Databricks [managed Volume files](https://docs.databricks.com/aws/en/volumes/volume-files) and [Free Edition limits](https://docs.databricks.com/aws/en/getting-started/free-edition-limitations) are documented by Databricks. Free Edition has quotas, so a five-season backfill may need to be split across days.

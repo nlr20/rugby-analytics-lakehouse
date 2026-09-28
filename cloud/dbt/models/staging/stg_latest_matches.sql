@@ -1,12 +1,10 @@
 {{ config(materialized='view') }}
 
-with ranked as (
-    select *, row_number() over (
-        partition by match_id order by ingested_at desc, transform_version desc, source_hash desc
-    ) as version_rank
-    from {{ source('silver', 'silver_match_versions') }}
-)
-select * except (version_rank)
-from ranked
-where version_rank = 1
+select m.*
+from {{ source('silver', 'silver_match_versions') }} m
+join {{ ref('stg_current_fixtures') }} f
+  on m.match_id = f.match_id
+ and m.source_hash = f.source_hash
+ and m.transform_version = f.transform_version
+where f.status = 'completed'
 

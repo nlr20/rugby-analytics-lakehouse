@@ -1,20 +1,16 @@
-# Cloud deployment draft
+# Cloud path and deployment state
 
-The Airflow DAG, Databricks job script, and dbt models are implementation code for the planned Azure path. They are not yet deployed or integration tested against an Azure/Databricks workspace.
+The working target is the existing AWS-hosted Databricks Free Edition workspace. Its managed `landing` Volume is the cloud storage stage; serverless notebooks create Bronze, Silver and Gold Delta tables. Local dbt Core builds a second analytical model in `workspace.rugby_dbt`, and the SQL datasets support a Databricks dashboard or Power BI Desktop.
 
-For the no-cost path using the available AWS-hosted Databricks Free Edition workspace, see [Free Edition setup](free-edition/README.md) and [dbt setup](dbt/README.md). Bronze, Silver, and Gold notebook runs have been verified there, and the dbt build passed all 22 data tests. The Azure `abfss://` reader below is not suitable for that workspace.
-
-The [dashboard datasets](dashboard/README.md) are prepared for the next manual workspace step.
-
-## Required configuration
-
-| Component | Configuration |
+| Part | State |
 | --- | --- |
-| Airflow worker | Install this Python package, `azure-storage-blob`, and the Databricks Airflow provider. Set `AZURE_STORAGE_CONNECTION_STRING` and `RUGBY_RAW_CONTAINER` in secret-backed environment configuration. |
-| Airflow connection | Create `databricks_default` and Variable `rugby_databricks_job_id`. |
-| Databricks job | Python task `cloud/databricks/ingest.py`; parameters `blob_path`, `raw_container`, `storage_account`, `catalog`, `schema`. Airflow passes `blob_path`. Configure the remaining parameters in the job. |
-| Databricks storage | Grant the job identity read access to the raw ADLS container, and write access to its Unity Catalog schema. |
-| dbt | Use `dbt-databricks`, a Databricks profile named `rugby_analytics`, and environment variables `RUGBY_DATABRICKS_CATALOG` and `RUGBY_DATABRICKS_SCHEMA`. Run `dbt build` after the Databricks ingestion job. |
+| 2024–25 Volume ingestion, Delta Gold, dbt and dashboard | Manually run and verified earlier |
+| Five-season local Python pipeline | Run and checked; see [audit](../docs/multiseason-audit.md) |
+| Five-season Databricks notebooks, dbt models and dashboard SQL | Prepared; manual workspace run pending |
+| [Airflow DAG](airflow/rugby_urc.py) | Prepared; not deployed or integration tested |
+| [Azure ADLS reader](databricks/ingest.py) | Separate draft; incompatible with this AWS-hosted Free Edition path as written |
+| Power BI report | [Connection and model plan](powerbi/README.md) prepared; no `.pbix` claimed |
 
-The DAG currently triggers ingestion, but dbt is a separate deployment step. Before production use, add a dbt task after ingestion and verify credentials, Delta schemas, source corrections, and reruns in a real workspace.
+The [manual Free Edition guide](free-edition/README.md) is the next runbook. Airflow orchestration is a later validation step after the data model is confirmed in the workspace. Its DAG uses the same source reader and landing writer, uploads to the managed Volume, invokes an ingestion notebook job for each season, invokes a Gold notebook job, then runs dbt Core. It is manual-triggered to avoid unexpected serverless quota use.
 
+Airflow needs the repository package, `apache-airflow-providers-databricks`, `databricks-sdk` and dbt Core available to its worker; `RUGBY_LANDING_DIR` and `RUGBY_REPO_DIR` paths; Databricks SDK credentials for Volume upload; a `databricks_default` Airflow connection; and Variables `rugby_ingest_job_id` and `rugby_gold_job_id` pointing to single-notebook Databricks jobs. The two jobs must run [ingest_notebook.py](free-edition/ingest_notebook.py) and [gold_notebook.py](free-edition/gold_notebook.py) on serverless compute. Store credentials outside Git. The DAG has only passed Python syntax checks so far.

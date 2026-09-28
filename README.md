@@ -1,77 +1,58 @@
 # Rugby Analytics Lakehouse
 
-**Question:** What can match and player scoring data tell us about team performance across a United Rugby Championship season?
+**Question:** How do fixtures, teams, player scoring and team performance change across five United Rugby Championship seasons?
 
-This portfolio project starts with a reproducible local pipeline for the 2024–25 rugby union season. It tracks source corrections at match level and produces team-season metrics. Bronze, Silver, and Gold Delta tables have also been built on Databricks Free Edition. A repeated ingestion added no match versions, the Gold totals reconciled with the current matches, and dbt built five analytical models with 22 passing data tests. A three-view dashboard has been created in the workspace. Airflow and Azure work remains in progress; see [`cloud/`](cloud/README.md).
+This is the flagship data engineering project in the portfolio. The local reference pipeline has processed the 2021–22 through 2025–26 `celtic` JSON snapshots. It keeps raw versions, models current fixtures separately from completed results, handles source corrections, and produces team-season metrics. The 2024–25 Databricks Delta and dbt path was run previously; the five-season cloud extension in this repository is ready for a new manual validation run.
 
-## What works now
+## Architecture
 
 ```mermaid
 flowchart LR
-    A[Upstream URC JSON snapshot] --> B[Validate and compare match hashes]
-    B --> C[Bronze: immutable changed-match events]
-    C --> D[Silver: current matches, appearances, scoring events]
-    D --> E[Gold: team and match dimensions/facts]
-    E --> F[Team-season summary]
+    A[Five upstream season JSON snapshots] --> B[Airflow validation and landing]
+    B --> C[Databricks managed Volume]
+    C --> D[PySpark ingestion]
+    D --> E[Bronze: raw match versions]
+    D --> F[Silver: fixture snapshots, match and player versions]
+    F --> G[Gold: match fact, team dimension and season marts]
+    F --> H[dbt models and quality tests]
+    G --> I[Databricks dashboard / Power BI Desktop]
+    H --> I
 ```
 
-The local reference implementation uses Python and SQLite so the incremental and correction-handling logic can be run without cloud credentials. It writes changed source records to JSONL files under `data/bronze/`, keeps an append-only event history in SQLite, and replaces affected current-state records. A repeated identical snapshot makes no changes.
+The supported no-cost development path uses a Databricks Free Edition managed Volume as cloud storage, serverless Delta tables, local dbt Core and Power BI Desktop. The Airflow DAG is an executable deployment draft and has **not** run in an Airflow instance yet. The available Free Edition workspace is on AWS; the older Azure ADLS script under `cloud/databricks/` is an alternative draft, not part of this verified path. See [cloud setup](cloud/README.md).
 
 ## Source and scope
 
-- Source: [transientlunatic/Rugby-Data](https://github.com/transientlunatic/Rugby-Data), `json/celtic-2024-2025.json`, fetched at run time. The upstream project describes its JSON as professional rugby union scoring data. The [source audit](docs/source-audit.md) records the observed file version, fingerprint, and reuse status. No upstream dataset is committed here.
-- Coverage: one URC season. Player analysis currently covers lineup appearances and scoring events, not tackles, carries, or full performance statistics.
-- The upstream file is a **snapshot**, not an event feed. Incremental ingestion compares each match's content hash with the latest processed version. This detects late score and lineup corrections when the source is fetched again.
-- The source does not publish a fixture ID in this file. The pipeline derives one from competition, season, phase, round, and both teams. A change to one of those identity fields is treated as a new fixture and needs manual reconciliation.
+- Source: [transientlunatic/Rugby-Data JSON](https://github.com/transientlunatic/Rugby-Data/tree/master/json), files `celtic-2021-2022.json` through `celtic-2025-2026.json`. The [five-season audit](docs/multiseason-audit.md) records hashes, coverage and known data gaps. No upstream dataset is committed.
+- All five files contain 151 fixture rows. The latest available 2025–26 snapshot has 84 scored results and 67 fixtures with no result. Their dates have passed, so the project calls them **result unavailable in source** rather than upcoming games.
+- Player coverage means lineup appearances and listed scoring events. The source does not support claims about tackles, carries or complete individual performance.
+- The source is a snapshot, not a change feed. Each match and each whole-season snapshot has a content hash. Re-reading an identical snapshot creates no new match version. A corrected score or lineup creates a new version; Bronze preserves the older raw record.
+- The source does not publish a fixture ID. For named teams, the key uses competition, season, phase, round and teams. `TBC` fixtures use a temporary source-position key; a later named result replaces the placeholder in the current season snapshot.
 
 ## Run locally
 
-Requirements: Python 3.10+ and internet access for the first sync.
+Requires Python 3.10+. From the repository root:
 
 ```bash
 python -m pip install -e '.[dev]'
-rugby-lakehouse sync
-rugby-lakehouse summary
+rugby-lakehouse sync --all-seasons
 rugby-lakehouse quality
+rugby-lakehouse summary --season 2024-25
 python -m pytest -q
 ```
 
-For an offline input file, use `rugby-lakehouse sync --input path/to/matches.json`. Generated data stays in the ignored `data/` directory. Re-run `sync` to check for corrections; compare `changed_matches` between runs.
+`sync` fetches the five upstream files. Use `--season 2025-26` to process just one season, or `--input path/to/celtic-2025-2026.json --season 2025-26` for an offline file. Generated data is ignored under `data/`. Re-run `sync`; `changed_matches` should be zero when source contents are unchanged.
 
-For a fixed upstream version, use `rugby-lakehouse sync --source-ref c2de981ddcbcf2362fdc5719eefa6d9172740850`. The default `master` ref checks for later source corrections.
+Prepare the managed-Volume uploads with `rugby-lakehouse prepare-landing --all-seasons`. Each JSONL line contains the unchanged upstream `raw` record and the normalized `match` record. The filename includes season, transform version and a snapshot hash. See the [manual Free Edition guide](cloud/free-edition/README.md).
 
-To prepare a validated JSONL file for a manual Databricks Free Edition upload, run `rugby-lakehouse prepare-landing --source-ref c2de981ddcbcf2362fdc5719eefa6d9172740850`. The ignored landing filename includes the season and a snapshot hash, such as `data/landing/urc-2024-25-47ce925d0db9.jsonl`. This preserves distinct snapshots when upstream corrects the same season. See the [Free Edition setup](cloud/free-edition/README.md) for the verified ingestion and Gold runs.
+## Model and checks
 
-## Data model
-
-| Layer | Tables / files | Purpose |
+| Layer | Local tables / cloud equivalents | Purpose |
 | --- | --- | --- |
-| Bronze | `bronze_event`, `data/bronze/*.jsonl` | Immutable match versions with ingestion time and source hash |
-| Silver | `silver_match`, `silver_player_appearance`, `silver_scoring_event` | Validated current records and flattened child entities |
-| Gold | `dim_team`, `fact_match`, `gold_team_season` | Match facts and team-level season totals |
+| Bronze | `bronze_event` / `bronze_match_versions` | Raw changed records and source hashes |
+| Silver | `silver_fixture`; match, appearance and event tables / Delta version tables and season manifest | Current fixture snapshots and completed match detail |
+| Gold | `dim_team`, `fact_match`, `gold_team_season` / Delta and dbt marts | Team and match analytics by season |
 
-Gold computes played, wins, draws, points for, and points against from the current Silver state. These are descriptive results; the pipeline does not claim causal player-performance conclusions.
+Checks cover duplicate keys, status and score consistency, score-event reconciliation, two team appearances per match, fact counts, team points versus match points, and referential integrity in dbt. A published 2022–23 result has no scoring events; the check reports this **one source-quality exception** rather than inventing events. See [audit](docs/multiseason-audit.md).
 
-## Engineering choices and checks
-
-- Validate required fields, distinct teams, nonnegative scores, and unique fixture keys before writing.
-- Keep prior source versions in Bronze and upsert the latest version into Silver. On correction, replace the fixture's player and scoring rows, then refresh Gold in one database transaction.
-- Use content hashes for idempotence. The tests exercise repeat ingestion, a late score/date correction, malformed input, and duplicate fixture keys.
-- Normalize penalty tries to seven points before reconciling scoring events with final scores. The upstream event's `value` is five, while its final score includes the automatic two points. Keep the raw value in Bronze and the normalized value in Silver. A transform version makes existing local databases reprocess the same source snapshot when this rule changes.
-- Use parameterized SQL and keep credentials out of the repository.
-
-### Observed run
-
-On 28 September 2026, the upstream 2024–25 snapshot contained 151 fixtures and 16 teams. The pipeline produced 6,946 player appearances and 2,396 scoring events. A repeated run found zero changed matches. An audit found 16 apparent score discrepancies, all explained by one penalty try per affected fixture; after normalization, the quality report has zero score discrepancies. Team totals use the final scores. See the [source audit](docs/source-audit.md) for the evidence and limitations.
-
-## Cloud roadmap
-
-The no-cost development path uses Databricks Free Edition managed storage and a local upload. The Azure storage integration below remains a separate deployment draft because the available Free Edition workspace is hosted on AWS.
-
-The [dashboard](cloud/dashboard/README.md) has been created manually in the workspace; its SQL is versioned here. A portfolio image can be added later.
-
-1. Add a repeatable job for ingestion and dbt, with run observability.
-2. Deploy the Airflow DAG and Azure storage integration when a compatible, affordable workspace is available.
-
-The local pipeline provides a testable contract for that migration. Remaining cloud components will be marked implemented only after they run.
-
+The local five-season run produced 755 fixture rows, 688 scored matches, 67 fixtures without results, 31,602 player appearances and 10,870 listed scoring events. A repeated run added zero changed match versions. These are local results; the five-season Databricks and dbt run remains to be verified in the workspace.

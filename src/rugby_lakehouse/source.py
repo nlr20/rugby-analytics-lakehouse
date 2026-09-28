@@ -5,14 +5,22 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 
 SOURCE_REF = "master"
-SOURCE_FILE = "json/celtic-2024-2025.json"
+SEASONS = ("2021-22", "2022-23", "2023-24", "2024-25", "2025-26")
 
 
-def read_matches(path: Path | None = None, source_ref: str = SOURCE_REF) -> list[dict]:
+def source_file(season: str) -> str:
+    if season not in SEASONS:
+        raise ValueError(f"Unsupported season {season!r}; choose from {', '.join(SEASONS)}")
+    start = season[:4]
+    return f"json/celtic-{start}-{int(start) + 1}.json"
+
+
+def read_matches(path: Path | None = None, source_ref: str = SOURCE_REF, season: str = "2024-25") -> list[dict]:
+    source_file(season)
     if path is None:
         if source_ref != "master" and (len(source_ref) != 40 or any(c not in "0123456789abcdef" for c in source_ref)):
             raise ValueError("Source ref must be 'master' or a 40-character lowercase commit SHA")
-        url = f"https://raw.githubusercontent.com/transientlunatic/Rugby-Data/{source_ref}/{SOURCE_FILE}"
+        url = f"https://raw.githubusercontent.com/transientlunatic/Rugby-Data/{source_ref}/{source_file(season)}"
         request = Request(url, headers={"User-Agent": "rugby-analytics-lakehouse/0.1"})
         with urlopen(request, timeout=30) as response:
             payload = response.read()

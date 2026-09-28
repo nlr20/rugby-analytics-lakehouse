@@ -1,7 +1,7 @@
 version: 2
 sources:
   - name: silver
-    catalog: "{{ env_var('RUGBY_DATABRICKS_CATALOG') }}"
+    database: "{{ env_var('RUGBY_DATABRICKS_CATALOG') }}"
     schema: "{{ env_var('RUGBY_DATABRICKS_SCHEMA') }}"
     tables:
       - name: silver_match_versions

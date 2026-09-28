@@ -11,7 +11,7 @@ from pyspark.sql import Window, functions as F
 dbutils.widgets.text("catalog", "workspace")
 dbutils.widgets.text("schema", "rugby_analytics")
 dbutils.widgets.text(
-    "landing_path", "/Volumes/workspace/rugby_analytics/landing/matches.jsonl"
+    "landing_path", "/Volumes/workspace/rugby_analytics/landing/urc-2024-25-47ce925d0db9.jsonl"
 )
 catalog = dbutils.widgets.get("catalog")
 schema = dbutils.widgets.get("schema")

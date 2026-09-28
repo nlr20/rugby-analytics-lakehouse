@@ -40,7 +40,7 @@ For an offline input file, use `rugby-lakehouse sync --input path/to/matches.jso
 
 For a fixed upstream version, use `rugby-lakehouse sync --source-ref c2de981ddcbcf2362fdc5719eefa6d9172740850`. The default `master` ref checks for later source corrections.
 
-To prepare a validated JSONL file for a manual Databricks Free Edition upload, run `rugby-lakehouse prepare-landing --source-ref c2de981ddcbcf2362fdc5719eefa6d9172740850`. The file is written to the ignored `data/landing/matches.jsonl` path. See the [Free Edition setup](cloud/free-edition/README.md); that workspace path has not yet been deployed or verified.
+To prepare a validated JSONL file for a manual Databricks Free Edition upload, run `rugby-lakehouse prepare-landing --source-ref c2de981ddcbcf2362fdc5719eefa6d9172740850`. The ignored landing filename includes the season and a snapshot hash, such as `data/landing/urc-2024-25-47ce925d0db9.jsonl`. This preserves distinct snapshots when upstream corrects the same season. See the [Free Edition setup](cloud/free-edition/README.md); that workspace path has not yet been deployed or verified.
 
 ## Data model
 

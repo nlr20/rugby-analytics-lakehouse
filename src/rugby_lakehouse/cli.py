@@ -21,7 +21,7 @@ def main() -> None:
         result = run(read_matches(args.input, args.source_ref), database, args.data_dir / "bronze")
     elif args.command == "prepare-landing":
         result = write_landing_file(
-            read_matches(args.input, args.source_ref), args.data_dir / "landing" / "matches.jsonl"
+            read_matches(args.input, args.source_ref), args.data_dir / "landing"
         )
     elif args.command == "summary":
         result = summary(database)

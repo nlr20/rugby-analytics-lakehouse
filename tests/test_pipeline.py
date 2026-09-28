@@ -84,11 +84,17 @@ def test_penalty_try_and_transform_upgrade(fixture_match, tmp_path):
 
 
 def test_landing_file_keeps_raw_and_normalized_match(fixture_match, tmp_path):
-    target = tmp_path / "landing" / "matches.jsonl"
-    assert write_landing_file([fixture_match], target)["matches"] == 1
+    result = write_landing_file([fixture_match], tmp_path / "landing")
+    target = tmp_path / "landing" / f"urc-2024-25-{result['snapshot_hash'][:12]}.jsonl"
+    assert result["matches"] == 1
     envelope = json.loads(target.read_text(encoding="utf-8"))
     assert envelope["raw"] == fixture_match
     assert envelope["match"]["home_score"] == 7
     assert envelope["match"]["source_hash"] == normalize_match(fixture_match)["source_hash"]
     assert envelope["match"]["transform_version"] == TRANSFORM_VERSION
+    corrected = copy.deepcopy(fixture_match)
+    corrected["home"]["score"] = 8
+    later = write_landing_file([corrected], tmp_path / "landing")
+    assert later["landing_file"] != result["landing_file"]
+    assert target.exists()
 

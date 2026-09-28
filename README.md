@@ -40,6 +40,8 @@ For an offline input file, use `rugby-lakehouse sync --input path/to/matches.jso
 
 For a fixed upstream version, use `rugby-lakehouse sync --source-ref c2de981ddcbcf2362fdc5719eefa6d9172740850`. The default `master` ref checks for later source corrections.
 
+To prepare a validated JSONL file for a manual Databricks Free Edition upload, run `rugby-lakehouse prepare-landing --source-ref c2de981ddcbcf2362fdc5719eefa6d9172740850`. The file is written to the ignored `data/landing/matches.jsonl` path. See the [Free Edition setup](cloud/free-edition/README.md); that workspace path has not yet been deployed or verified.
+
 ## Data model
 
 | Layer | Tables / files | Purpose |
@@ -63,6 +65,8 @@ Gold computes played, wins, draws, points for, and points against from the curre
 On 28 September 2026, the upstream 2024–25 snapshot contained 151 fixtures and 16 teams. The pipeline produced 6,946 player appearances and 2,396 scoring events. A repeated run found zero changed matches. An audit found 16 apparent score discrepancies, all explained by one penalty try per affected fixture; after normalization, the quality report has zero score discrepancies. Team totals use the final scores. See the [source audit](docs/source-audit.md) for the evidence and limitations.
 
 ## Cloud roadmap
+
+The no-cost development path uses Databricks Free Edition managed storage and a local upload. The Azure storage integration below remains a separate deployment draft because the available Free Edition workspace is hosted on AWS.
 
 1. Deploy the Airflow DAG to land validated snapshot envelopes in Azure storage.
 2. Run the Databricks job to ingest distinct match versions into Bronze and Silver Delta tables.

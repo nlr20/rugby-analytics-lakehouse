@@ -1,9 +1,11 @@
 import copy
+import json
 import sqlite3
 
 import pytest
 
 from rugby_lakehouse.pipeline import quality, run, summary
+from rugby_lakehouse.landing import write_landing_file
 from rugby_lakehouse.transform import normalize_match
 
 
@@ -79,4 +81,13 @@ def test_penalty_try_and_transform_upgrade(fixture_match, tmp_path):
     with sqlite3.connect(db_path) as db:
         assert db.execute("SELECT points FROM silver_scoring_event").fetchone()[0] == 7
         assert db.execute("SELECT COUNT(*) FROM bronze_event").fetchone()[0] == 1
+
+
+def test_landing_file_keeps_raw_and_normalized_match(fixture_match, tmp_path):
+    target = tmp_path / "landing" / "matches.jsonl"
+    assert write_landing_file([fixture_match], target)["matches"] == 1
+    envelope = json.loads(target.read_text(encoding="utf-8"))
+    assert envelope["raw"] == fixture_match
+    assert envelope["match"]["home_score"] == 7
+    assert envelope["match"]["source_hash"] == normalize_match(fixture_match)["source_hash"]
 

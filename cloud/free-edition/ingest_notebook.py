@@ -41,7 +41,7 @@ def append_new_versions(frame, table_name, keys):
     full_name = f"{namespace}.`{table_name}`"
     frame = frame.dropDuplicates(keys)
     if not spark.catalog.tableExists(f"{catalog}.{schema}.{table_name}"):  # noqa: F821
-        frame.write.format("delta").mode("errorifexists").saveAsTable(full_name)
+        frame.write.format("delta").mode("append").saveAsTable(full_name)
         return
     condition = " AND ".join(f"target.`{key}` = incoming.`{key}`" for key in keys)
     DeltaTable.forName(spark, full_name).alias("target").merge(  # noqa: F821

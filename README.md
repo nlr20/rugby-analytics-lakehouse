@@ -68,7 +68,7 @@ On 28 September 2026, the upstream 2024–25 snapshot contained 151 fixtures and
 
 The no-cost development path uses Databricks Free Edition managed storage and a local upload. The Azure storage integration below remains a separate deployment draft because the available Free Edition workspace is hosted on AWS.
 
-1. Publish a small dashboard with team and player scoring questions.
+1. Build the [prepared dashboard](cloud/dashboard/README.md) with team performance, home advantage, and player scoring views, then capture a portfolio image.
 2. Add a repeatable job for ingestion and dbt, with run observability.
 3. Deploy the Airflow DAG and Azure storage integration when a compatible, affordable workspace is available.
 

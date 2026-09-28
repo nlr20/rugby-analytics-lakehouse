@@ -4,6 +4,8 @@ The Airflow DAG, Databricks job script, and dbt models are implementation code f
 
 For the no-cost path using the available AWS-hosted Databricks Free Edition workspace, see [Free Edition setup](free-edition/README.md) and [dbt setup](dbt/README.md). Bronze, Silver, and Gold notebook runs have been verified there, and the dbt build passed all 22 data tests. The Azure `abfss://` reader below is not suitable for that workspace.
 
+The [dashboard datasets](dashboard/README.md) are prepared for the next manual workspace step.
+
 ## Required configuration
 
 | Component | Configuration |

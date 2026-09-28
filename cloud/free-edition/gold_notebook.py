@@ -19,7 +19,7 @@ for table in ("silver_match_versions", "silver_scoring_versions"):
     if not spark.catalog.tableExists(f"{catalog}.{schema}.{table}"):  # noqa: F821
         raise ValueError(f"Run the ingestion notebook first: {catalog}.{schema}.{table} is missing")
 
-spark.sql(f"""  # noqa: F821
+spark.sql(f"""
 CREATE OR REPLACE TEMP VIEW rugby_latest_matches AS
 SELECT * EXCEPT (version_rank)
 FROM (
@@ -32,7 +32,7 @@ FROM (
 WHERE version_rank = 1
 """)
 
-spark.sql(f"""  # noqa: F821
+spark.sql(f"""
 CREATE OR REPLACE TABLE {namespace}.`dim_team` USING DELTA AS
 SELECT sha2(team_name, 256) AS team_id, team_name
 FROM (
@@ -42,7 +42,7 @@ FROM (
 )
 """)
 
-spark.sql(f"""  # noqa: F821
+spark.sql(f"""
 CREATE OR REPLACE TABLE {namespace}.`fact_match` USING DELTA AS
 SELECT match_id, season, round_type, round_number, played_at,
        sha2(home_team, 256) AS home_team_id,
@@ -54,7 +54,7 @@ SELECT match_id, season, round_type, round_number, played_at,
 FROM rugby_latest_matches
 """)
 
-spark.sql(f"""  # noqa: F821
+spark.sql(f"""
 CREATE OR REPLACE TABLE {namespace}.`gold_team_season` USING DELTA AS
 WITH sides AS (
   SELECT season, home_team_id AS team_id, home_score AS points_for,
@@ -75,7 +75,7 @@ FROM sides
 GROUP BY season, team_id
 """)
 
-spark.sql(f"""  # noqa: F821
+spark.sql(f"""
 CREATE OR REPLACE TABLE {namespace}.`gold_player_scoring` USING DELTA AS
 SELECT m.season, sha2(e.team, 256) AS team_id, e.player,
        sum(CASE WHEN e.event_type = 'Try' THEN 1 ELSE 0 END) AS tries,
@@ -89,7 +89,7 @@ WHERE e.player IS NOT NULL AND trim(e.player) <> ''
 GROUP BY m.season, e.team, e.player
 """)
 
-checks = spark.sql(f"""  # noqa: F821
+checks = spark.sql(f"""
 SELECT
   (SELECT count(*) FROM rugby_latest_matches) AS current_matches,
   (SELECT count(*) FROM {namespace}.`fact_match`) AS fact_matches,
@@ -106,7 +106,7 @@ if checks.team_points_for != checks.match_points:
     raise ValueError("Team-season points do not reconcile with match scores")
 
 print(checks.asDict())
-spark.sql(f"""  # noqa: F821
+spark.sql(f"""
 SELECT d.team_name, g.played, g.wins, g.draws, g.points_for, g.points_against
 FROM {namespace}.`gold_team_season` g
 JOIN {namespace}.`dim_team` d ON g.team_id = d.team_id

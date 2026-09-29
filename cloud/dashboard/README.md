@@ -5,7 +5,7 @@ These read-only queries use the `workspace.rugby_dbt` marts. The [five-season db
 | Query | Suggested view | Meaning |
 | --- | --- | --- |
 | [Team performance](01_team_performance.sql) | Bar chart filtered by season | Wins, win percentage and scoring difference, including playoffs |
-| [Team results by venue](02_home_advantage.sql) | Bars by result, filtered by season and team | Home/away wins, draws and losses from each team's perspective |
+| [Team results by venue](02_home_advantage.sql) | Pie chart by result, filtered by season and team | Home/away wins, draws and losses from each team's perspective; use `Count(outcome)` because each row is one team in one match |
 | [Player scoring](03_player_scoring.sql) | Table filtered by season and team | Top 20 listed try scorers per team and their recorded points |
 | [Fixture schedule](04_fixture_schedule.sql) | Table filtered by season/team/status | Results and fixtures whose result is unavailable in the source |
 | [Team trend](05_team_trend.sql) | Line chart | Team wins and point difference across seasons |
@@ -17,15 +17,15 @@ In Databricks: **New > Dashboard > Data > Add SQL dataset**, paste a query and r
 | Dataset | Grain | Team link |
 | --- | --- | --- |
 | Team performance | One row per team per season | `season_team_key`; hub for a season/team |
-| Team results by venue (previously Home advantage) | Several outcome rows per team per season | Many-to-one to Team performance on `season_team_key` |
+| Team results by venue (previously Home advantage) | One row per team per completed match | Many-to-one to Team performance on `season_team_key` |
 | Player scoring | Several player rows per team per season | Many-to-one to Team performance on `season_team_key` |
 | Team trend | One row per team per season | Same `season_team_key` as Team performance |
 | Fixture Schedule | One row per fixture | `match_id`; team appears in either `home_team` or `away_team` |
 
 Fixture Schedule cannot use a single `season_team_key` without duplicating each fixture or losing the seven `TBC` fixtures. Its SQL accepts a `:team` parameter and filters on `home_team = :team OR away_team = :team`; `All` or null preserves the full schedule. In the dataset editor, set the parameter's default to `All` so the query can run before the dashboard filter is configured.
 
-The available Free Edition dashboard has no Relationships pane. To filter **all five** datasets, configure one global Single value **Team** control: under Fields select `team_name` from Team performance, Team results by venue, Player scoring and Team trend; under Parameters select Fixture Schedule's `team`. This is a [query-based field and parameter control](https://docs.databricks.com/aws/en/dashboards/manage/filters/parameters). It allows one chosen team to filter the four team-grain datasets and the fixture query without duplicating fixture rows. Clicking a team bar itself only cross-filters widgets sharing that bar's dataset in this workspace.
+In the dashboard Relationships editor, connect Team performance's `season_team_key` (one side) to the same field in Team results by venue, Player scoring, and Team Trend (many side). Team Trend currently has one row per team-season, but the editor offers only One-to-Many or Many-to-One. These relationships allow a selection in the team performance chart to filter the connected charts. Fixture Schedule still needs a separate team parameter because one fixture has both a home and an away team. A global Single value **Team** control can combine the team fields of the four related datasets with Fixture Schedule's `team` parameter; see [query-based field and parameter controls](https://docs.databricks.com/aws/en/dashboards/manage/filters/parameters).
 
-The venue dataset counts team appearances, so an unfiltered chart totals two appearances per match. Give that chart the title **Team results by venue** rather than treating it as the old whole-league home advantage count.
+The venue dataset has two team appearances per completed match. Its pie chart should use `outcome` as the category and `Count(outcome)` as the value; an unfiltered chart therefore totals two appearances per match. Give it the title **Team results by venue** rather than treating it as the old whole-league home advantage count.
 
 See [Databricks dashboard datasets](https://docs.databricks.com/aws/en/dashboards/manage/data-modeling/datasets) and [visualization setup](https://docs.databricks.com/aws/en/dashboards/manage/visualizations).

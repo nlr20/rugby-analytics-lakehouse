@@ -11,6 +11,7 @@ Load these dbt tables from `workspace.rugby_dbt`:
 | `dim_team` | Team labels and team ID |
 | `fact_match` | Completed scores, dates, season and winner |
 | `team_season` | Wins, draws, points for/against by season and team |
+| `team_match` | One row per team's match appearance, including home/away venue and result |
 | `player_scoring` | Named try scorers and listed scoring points |
 | `fixture_schedule` | All fixtures, including missing source results |
 

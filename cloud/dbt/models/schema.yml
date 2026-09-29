@@ -66,6 +66,28 @@ models:
               arguments:
                 to: ref('dim_team')
                 field: team_id
+  - name: team_match
+    description: One team appearance per completed match, with venue and result from that team's perspective.
+    columns:
+      - name: match_team_key
+        tests: [not_null, unique]
+      - name: team_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_team')
+                field: team_id
+      - name: venue
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['Home', 'Away']
+      - name: result
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['Win', 'Draw', 'Loss']
   - name: player_scoring
     description: Points from listed scoring events; source event detail can be incomplete.
     columns:

@@ -49,7 +49,7 @@ Prepare the managed-Volume uploads with `rugby-lakehouse prepare-landing --all-s
 | --- | --- | --- |
 | Bronze | `bronze_event` / `bronze_match_versions` | Raw changed records and source hashes |
 | Silver | `silver_fixture`; match, appearance and event tables / Delta version tables and season manifest | Current fixture snapshots and completed match detail |
-| Gold | `dim_team`, `fact_match`, `gold_team_season` / dbt marts | Team and match analytics by season |
+| Gold | `dim_team`, `fact_match`, `gold_team_season` / dbt marts including `team_match` | Team and match analytics by season and venue |
 
 Checks cover duplicate keys, status and score consistency, score-event reconciliation, two team appearances per match, fact counts, team points versus match points, and referential integrity in dbt. A published 2022–23 result has no scoring events; the check reports this **one source-quality exception** rather than inventing events. See [audit](docs/multiseason-audit.md).
 

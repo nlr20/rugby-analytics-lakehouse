@@ -11,13 +11,13 @@ from airflow.providers.databricks.operators.databricks import DatabricksRunNowOp
 from databricks.sdk import WorkspaceClient
 
 from rugby_lakehouse.landing import write_landing_file
-from rugby_lakehouse.source import SEASONS, read_matches
+from rugby_lakehouse.source import SEASONS, read_matches, source_file
 
 
 @dag(
     dag_id="rugby_urc_five_seasons",
     start_date=datetime(2026, 1, 1, tzinfo=timezone.utc),
-    schedule=None,
+    schedule=os.environ.get("RUGBY_AIRFLOW_SCHEDULE") or None,
     catchup=False,
     max_active_runs=1,
     default_args={"retries": 2, "retry_delay": timedelta(minutes=10)},
@@ -39,23 +39,27 @@ def rugby_urc_pipeline():
         subprocess.run(["dbt", "build", "--profiles-dir", str(project),
                         "--project-dir", str(project)], check=True)
 
+    seasons = [value.strip() for value in os.environ.get(
+        "RUGBY_SEASONS", ",".join(SEASONS)).split(",") if value.strip()]
+    if not seasons:
+        raise ValueError("RUGBY_SEASONS must contain at least one season")
+    for season in seasons:
+        source_file(season)
     previous = None
-    for season in SEASONS:
+    for season in seasons:
         label = season.replace("-", "_")
         uploaded = prepare_and_upload.override(task_id=f"upload_{label}")(season)
-        ingested = DatabricksRunNowOperator(
-            task_id=f"ingest_{label}",
-            databricks_conn_id="databricks_default",
-            job_id=int(Variable.get("rugby_ingest_job_id", default_var="0")),
-            notebook_params={"landing_path": "{{ ti.xcom_pull(task_ids='upload_" + label + "') }}"},
-            wait_for_termination=True,
-        )
         if previous is not None:
             previous >> uploaded
-        uploaded >> ingested
-        previous = ingested
+        previous = uploaded
 
-    previous >> build_dbt()
+    ingested = DatabricksRunNowOperator(
+        task_id="ingest_landing_folder",
+        databricks_conn_id="databricks_default",
+        job_id=int(Variable.get("rugby_ingest_job_id", default_var="0")),
+        wait_for_termination=True,
+    )
+    previous >> ingested >> build_dbt()
 
 
 rugby_urc_pipeline()

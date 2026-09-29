@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+import re
 from urllib.request import Request, urlopen
 
 SOURCE_REF = "master"
@@ -9,10 +10,12 @@ SEASONS = ("2021-22", "2022-23", "2023-24", "2024-25", "2025-26")
 
 
 def source_file(season: str) -> str:
-    if season not in SEASONS:
-        raise ValueError(f"Unsupported season {season!r}; choose from {', '.join(SEASONS)}")
-    start = season[:4]
-    return f"json/celtic-{start}-{int(start) + 1}.json"
+    if not re.fullmatch(r"20\d{2}-\d{2}", season):
+        raise ValueError(f"Unsupported season format {season!r}; expected YYYY-YY")
+    start = int(season[:4])
+    if int(season[-2:]) != (start + 1) % 100:
+        raise ValueError(f"Unsupported season {season!r}; years must be consecutive")
+    return f"json/celtic-{start}-{start + 1}.json"
 
 
 def read_matches(path: Path | None = None, source_ref: str = SOURCE_REF, season: str = "2024-25") -> list[dict]:

@@ -16,11 +16,13 @@ From the repository root, run `rugby-lakehouse prepare-landing --all-seasons`. U
 
 These names identify the [audited snapshot](../../docs/multiseason-audit.md). If upstream data changes, `prepare-landing` will print new hashes and filenames. Each file goes to `/Volumes/workspace/rugby_analytics/landing/<filename>`.
 
-## 2. Ingest each season
+## 2. Ingest the landing folder
 
-Update or import [ingest_notebook.py](ingest_notebook.py) in Databricks. Run it on serverless compute once for each of the five paths, setting its `landing_path` widget. Start with 2024–25 so the existing one-season data is migrated to the new fixture-snapshot model; run the other seasons in any order. The run prints source fixtures, new completed match versions, current fixtures, current completed matches, fixtures without a result, and score-event discrepancies.
+Import [ingest_notebook.py](ingest_notebook.py) and [ingest_folder_notebook.py](ingest_folder_notebook.py) into the **same Databricks workspace folder**. Run the folder notebook on serverless compute. It finds all `v3` JSONL files in the managed `landing` Volume, reads the season and snapshot hash inside each, skips snapshots already recorded in the Delta manifest, and calls the ingestion notebook for the rest. It ignores the old 2024–25 JSONL filename. The output lists processed and already-loaded filenames, current fixture and match totals, score-event discrepancies, and counts by season/status.
 
-Expected **after all five files**: 755 current fixtures, 688 current completed matches, 67 fixtures without results, and one score-event discrepancy. Re-running the same file should show zero new match versions. The 2022–23 discrepancy is documented in the audit; investigate any additional discrepancy before using the marts.
+The previously ingested 2024–25 `v3` file should be reported as already loaded. The other four files should be processed in one run. A second run with no changed input should process nothing. If a weekly source update changes a match, `prepare-landing --season YYYY-YY` creates a new content-hashed filename; upload it and rerun the folder notebook. An overwritten stable filename such as `urc-2026-27.jsonl` also works if its internal snapshot hash is regenerated when the content changes. Do not manually edit that hash.
+
+Expected **after all five files**: 755 current fixtures, 688 current completed matches, 67 fixtures without results, and one score-event discrepancy. The 2022–23 discrepancy is documented in the audit; investigate any additional discrepancy before using the marts.
 
 The notebook writes append-only Bronze raw versions, append-only completed match and player versions, versioned fixture rows, and a season snapshot manifest. The manifest is published after its rows so current-state readers use only a complete season snapshot. Previous 2024–25 Delta data remains in its version tables; a new `transform_version` is added for the five-season design.
 

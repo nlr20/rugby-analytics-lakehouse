@@ -39,9 +39,9 @@ rugby-lakehouse summary --season 2024-25
 python -m pytest -q
 ```
 
-`sync` fetches the five upstream files. Use `--season 2025-26` to process just one season, or `--input path/to/celtic-2025-2026.json --season 2025-26` for an offline file. Generated data is ignored under `data/`. Re-run `sync`; `changed_matches` should be zero when source contents are unchanged.
+`sync --all-seasons` fetches the five audited historical files. Use `--season 2025-26` to process one season, or `--input path/to/celtic-2025-2026.json --season 2025-26` for an offline file. A future consecutive season such as `2026-27` works with `--season 2026-27` when its upstream file exists. Generated data is ignored under `data/`. Re-run `sync`; `changed_matches` should be zero when source contents are unchanged.
 
-Prepare the managed-Volume uploads with `rugby-lakehouse prepare-landing --all-seasons`. Each JSONL line contains the unchanged upstream `raw` record and the normalized `match` record. The filename includes season, transform version and a snapshot hash. See the [manual Free Edition guide](cloud/free-edition/README.md).
+Prepare the managed-Volume uploads with `rugby-lakehouse prepare-landing --all-seasons`, or use `--season YYYY-YY` for a weekly update. Each JSONL line contains the unchanged upstream `raw` record and the normalized `match` record. The filename includes season, transform version and a snapshot hash, so a changed upstream file creates a new landing name. The [folder ingestion notebook](cloud/free-edition/ingest_folder_notebook.py) discovers and processes new snapshots without changing a widget for each file. See the [manual Free Edition guide](cloud/free-edition/README.md).
 
 ## Model and checks
 

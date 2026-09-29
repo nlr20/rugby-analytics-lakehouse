@@ -137,8 +137,9 @@ def test_unreported_fixture_becomes_result_and_placeholder_is_removed(fixture_ma
         assert db.execute("SELECT COUNT(*) FROM bronze_event").fetchone()[0] == 2
 
 
-def test_season_source_files_are_allowlisted():
+def test_season_source_files_support_new_consecutive_years():
     assert source_file("2025-26") == "json/celtic-2025-2026.json"
+    assert source_file("2026-27") == "json/celtic-2026-2027.json"
     with pytest.raises(ValueError, match="Unsupported season"):
-        source_file("2026-27")
+        source_file("2026-28")
 

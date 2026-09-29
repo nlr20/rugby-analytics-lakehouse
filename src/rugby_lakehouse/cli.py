@@ -6,7 +6,7 @@ from pathlib import Path
 
 from .landing import write_landing_file
 from .pipeline import quality, run, summary
-from .source import SEASONS, read_matches
+from .source import SEASONS, read_matches, source_file
 
 
 def main() -> None:
@@ -15,7 +15,7 @@ def main() -> None:
     parser.add_argument("--input", type=Path, help="Local source JSON; sync fetches upstream when omitted")
     parser.add_argument("--source-ref", default="master", help="Upstream commit SHA for a fixed snapshot (default: master)")
     seasons = parser.add_mutually_exclusive_group()
-    seasons.add_argument("--season", choices=SEASONS)
+    seasons.add_argument("--season", help="Season such as 2026-27; defaults to 2024-25")
     seasons.add_argument("--all-seasons", action="store_true")
     parser.add_argument("--data-dir", type=Path, default=Path("data"))
     args = parser.parse_args()
@@ -24,6 +24,11 @@ def main() -> None:
     if args.all_seasons and args.command not in ("sync", "prepare-landing"):
         parser.error("--all-seasons is for sync or prepare-landing")
     selected_season = args.season or "2024-25"
+    if args.season:
+        try:
+            source_file(args.season)
+        except ValueError as exc:
+            parser.error(str(exc))
     database = args.data_dir / "rugby.sqlite"
     if args.command == "sync":
         selected = SEASONS if args.all_seasons else (selected_season,)

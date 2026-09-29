@@ -7,11 +7,25 @@ These read-only queries use the `workspace.rugby_dbt` marts. The [five-season db
 | [Team performance](01_team_performance.sql) | Bar chart filtered by season | Wins, win percentage and scoring difference, including playoffs |
 | [Team results by venue](02_home_advantage.sql) | Bars by result, filtered by season and team | Home/away wins, draws and losses from each team's perspective |
 | [Player scoring](03_player_scoring.sql) | Table filtered by season and team | Top 20 listed try scorers per team and their recorded points |
-| [Fixture schedule](04_fixture_schedule.sql) | Table filtered by season/status | Results and fixtures whose result is unavailable in the source |
+| [Fixture schedule](04_fixture_schedule.sql) | Table filtered by season/team/status | Results and fixtures whose result is unavailable in the source |
 | [Team trend](05_team_trend.sql) | Line chart | Team wins and point difference across seasons |
 
 In Databricks: **New > Dashboard > Data > Add SQL dataset**, paste a query and run it; add a widget on the Canvas. Add a `season` filter so viewers can compare like with like. The team-performance view is not an official league table: it includes playoff matches and does not calculate bonus points. Player scoring is based on listed events, which have one documented gap in 2022–23. Results marked `result_unavailable` may have dates in the past; the source snapshot has no final score for them.
 
-The three team-related SQL datasets now expose `season_team_key`. If the workspace has the **Dashboard Relationships Public Preview**, link Team performance (one row per season/team) to Team results by venue and Player scoring (many rows per season/team) on that key. A click on a team bar can then filter the related charts. If Relationships is unavailable, add a global **Team** field filter mapped to `team_name` in each dataset; bar clicks alone only cross-filter visuals built from the same dataset. The venue dataset counts team appearances, so an unfiltered chart totals two appearances per match. Give that chart the title **Team results by venue** rather than treating it as the old whole-league home advantage count.
+## How the five datasets relate
+
+| Dataset | Grain | Team link |
+| --- | --- | --- |
+| Team performance | One row per team per season | `season_team_key`; hub for a season/team |
+| Team results by venue (previously Home advantage) | Several outcome rows per team per season | Many-to-one to Team performance on `season_team_key` |
+| Player scoring | Several player rows per team per season | Many-to-one to Team performance on `season_team_key` |
+| Team trend | One row per team per season | Same `season_team_key` as Team performance |
+| Fixture Schedule | One row per fixture | `match_id`; team appears in either `home_team` or `away_team` |
+
+Fixture Schedule cannot use a single `season_team_key` without duplicating each fixture or losing the seven `TBC` fixtures. Its SQL accepts a `:team` parameter and filters on `home_team = :team OR away_team = :team`; `All` or null preserves the full schedule. In the dataset editor, set the parameter's default to `All` so the query can run before the dashboard filter is configured.
+
+The available Free Edition dashboard has no Relationships pane. To filter **all five** datasets, configure one global Single value **Team** control: under Fields select `team_name` from Team performance, Team results by venue, Player scoring and Team trend; under Parameters select Fixture Schedule's `team`. This is a [query-based field and parameter control](https://docs.databricks.com/aws/en/dashboards/manage/filters/parameters). It allows one chosen team to filter the four team-grain datasets and the fixture query without duplicating fixture rows. Clicking a team bar itself only cross-filters widgets sharing that bar's dataset in this workspace.
+
+The venue dataset counts team appearances, so an unfiltered chart totals two appearances per match. Give that chart the title **Team results by venue** rather than treating it as the old whole-league home advantage count.
 
 See [Databricks dashboard datasets](https://docs.databricks.com/aws/en/dashboards/manage/data-modeling/datasets) and [visualization setup](https://docs.databricks.com/aws/en/dashboards/manage/visualizations).

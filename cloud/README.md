@@ -6,7 +6,9 @@ The working target is the existing AWS-hosted Databricks Free Edition workspace.
 | --- | --- |
 | 2024–25 Volume ingestion, Delta Gold, dbt and dashboard | Manually run and verified earlier |
 | Five-season local Python pipeline | Run and checked; see [audit](../docs/multiseason-audit.md) |
-| Five-season Silver notebook, folder runner, dbt Gold models and dashboard SQL | Prepared; folder runner workspace validation pending |
+| Five-season Silver notebook and folder runner | Manually run: 755 fixtures, 688 results, 67 without results |
+| Five-season dbt Gold | Built: seven models and 31 passing tests; Gold counts reconciled |
+| Five-season dashboard SQL | Prepared; workspace dashboard update pending |
 | [Airflow DAG](airflow/rugby_urc.py) | Prepared; not deployed or integration tested |
 | [Azure ADLS reader](databricks/ingest.py) | Separate draft; incompatible with this AWS-hosted Free Edition path as written |
 | Power BI report | [Connection and model plan](powerbi/README.md) prepared; no `.pbix` claimed |

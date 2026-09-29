@@ -1,6 +1,6 @@
 # Five-season Databricks Free Edition run
 
-The existing `workspace.rugby_analytics` schema and managed `landing` Volume can be reused. The earlier 2024–25 notebook and dbt runs were verified manually; **this five-season update has not yet run in Databricks**.
+The existing `workspace.rugby_analytics` schema and managed `landing` Volume were reused. On 29 September 2026, the five-season folder ingestion and dbt Gold build were verified in Databricks Free Edition.
 
 ## 1. Prepare and upload
 
@@ -22,12 +22,12 @@ Import [ingest_notebook.py](ingest_notebook.py) and [ingest_folder_notebook.py](
 
 The previously ingested 2024–25 `v3` file should be reported as already loaded. The other four files should be processed in one run. A second run with no changed input should process nothing. If a weekly source update changes a match, `prepare-landing --season YYYY-YY` creates a new content-hashed filename; upload it and rerun the folder notebook. An overwritten stable filename such as `urc-2026-27.jsonl` also works if its internal snapshot hash is regenerated when the content changes. Do not manually edit that hash.
 
-Expected **after all five files**: 755 current fixtures, 688 current completed matches, 67 fixtures without results, and one score-event discrepancy. The 2022–23 discrepancy is documented in the audit; investigate any additional discrepancy before using the marts.
+**Observed after all five files:** 755 current fixtures, 688 current completed matches, 67 fixtures without results, and one score-event discrepancy. The 2022–23 discrepancy is documented in the audit; investigate any additional discrepancy before using the marts.
 
 The notebook writes append-only Bronze raw versions, append-only completed match and player versions, versioned fixture rows, and a season snapshot manifest. The manifest is published after its rows so current-state readers use only a complete season snapshot. Previous 2024–25 Delta data remains in its version tables; a new `transform_version` is added for the five-season design.
 
 ## 3. Build dbt Gold
 
-Run `dbt build --profiles-dir .` in [cloud/dbt](../dbt/README.md). dbt reads current Silver snapshots and builds the Gold analytical tables and tests. Expected totals after all seasons: 755 fixtures, 67 without a result, 688 match facts and 1,376 team appearances. The previous 2024–25 Gold notebook run alone was verified at 151 facts, 16 teams and 7,313 match points; the five-season dbt totals are not yet verified in Databricks. The [Gold notebook](gold_notebook.py) is retained as a comparison implementation and is not required for the main pipeline. Lastly, refresh the [dashboard datasets](../dashboard/README.md) or connect [Power BI Desktop](../powerbi/README.md).
+Run `dbt build --profiles-dir .` in [cloud/dbt](../dbt/README.md). dbt reads current Silver snapshots and builds the Gold analytical tables and tests. The 29 September build completed seven models and 31 passing data tests. A read-only count check found 755 fixtures, 67 without a result, 688 match facts and 1,376 team appearances. The [Gold notebook](gold_notebook.py) is retained as a comparison implementation and is not required for the main pipeline. Lastly, refresh the [dashboard datasets](../dashboard/README.md) or connect [Power BI Desktop](../powerbi/README.md).
 
 Databricks [managed Volume files](https://docs.databricks.com/aws/en/volumes/volume-files) and [Free Edition limits](https://docs.databricks.com/aws/en/getting-started/free-edition-limitations) are documented by Databricks. Free Edition has quotas, so a five-season backfill may need to be split across days.

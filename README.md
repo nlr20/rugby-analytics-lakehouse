@@ -2,7 +2,7 @@
 
 **Question:** How do fixtures, teams, player scoring and team performance change across five United Rugby Championship seasons?
 
-This is the flagship data engineering project in the portfolio. The local reference pipeline has processed the 2021–22 through 2025–26 `celtic` JSON snapshots. It keeps raw versions, models current fixtures separately from completed results, handles source corrections, and produces team-season metrics. The 2024–25 Databricks Delta and dbt path was run previously; the five-season cloud extension in this repository is ready for a new manual validation run.
+This is the flagship data engineering project in the portfolio. The local reference pipeline has processed the 2021–22 through 2025–26 `celtic` JSON snapshots. It keeps raw versions, models current fixtures separately from completed results, handles source corrections, and produces team-season metrics. The five-season Databricks Silver ingestion and dbt Gold build have now been run and reconciled in the Free Edition workspace. Airflow orchestration and Power BI reporting remain to be deployed.
 
 ## Architecture
 
@@ -53,4 +53,4 @@ Prepare the managed-Volume uploads with `rugby-lakehouse prepare-landing --all-s
 
 Checks cover duplicate keys, status and score consistency, score-event reconciliation, two team appearances per match, fact counts, team points versus match points, and referential integrity in dbt. A published 2022–23 result has no scoring events; the check reports this **one source-quality exception** rather than inventing events. See [audit](docs/multiseason-audit.md).
 
-The local five-season run produced 755 fixture rows, 688 scored matches, 67 fixtures without results, 31,602 player appearances and 10,870 listed scoring events. A repeated run added zero changed match versions. These are local results; the five-season Databricks and dbt run remains to be verified in the workspace.
+The local five-season run produced 755 fixture rows, 688 scored matches, 67 fixtures without results, 31,602 player appearances and 10,870 listed scoring events. A repeated run added zero changed match versions. On 29 September 2026, the folder ingestion in Databricks reported the same 755 fixtures, 688 results, 67 unavailable results and one documented score-event discrepancy. dbt built seven models with 31 passing tests, and the Gold tables contained 755 fixtures, 688 match facts and 1,376 team appearances.

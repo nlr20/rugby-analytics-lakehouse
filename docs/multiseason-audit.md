@@ -10,7 +10,7 @@ Source: [transientlunatic/Rugby-Data `json` directory](https://github.com/transi
 | 2024–25 | `celtic-2024-2025.json` | `146ccbb17e009e403c3fdba9d544ffa69d312bac9be3c2672760b577732b04a4` | 151 | 151 | 0 | `urc-2024-25-v3-47ce925d0db9.jsonl` |
 | 2025–26 | `celtic-2025-2026.json` | `566cdb7862935a98271671f9773be5860f3a5b866b28293a10f6f6fc1b504a50` | 151 | 84 | 67 | `urc-2025-26-v3-5792a28de763.jsonl` |
 
-**Observed local run:** 755 fixture rows, 688 completed matches, 67 without source results, 31,602 player appearances, and 10,870 listed scoring events. Re-reading each of the five identical source files added zero match versions. The five-season cloud backfill has not yet been run.
+**Observed local run:** 755 fixture rows, 688 completed matches, 67 without source results, 31,602 player appearances, and 10,870 listed scoring events. Re-reading each of the five identical source files added zero match versions. On 29 September 2026 the Databricks folder ingestion reported the same 755/688/67 counts and one score-event discrepancy. The dbt Gold build passed all 31 tests; its tables contained 755 fixtures, 688 match facts and 1,376 team appearances.
 
 ## Known source limits
 

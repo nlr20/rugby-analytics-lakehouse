@@ -1,6 +1,6 @@
 # dbt on Databricks Free Edition
 
-dbt reads the current season-snapshot Silver tables in `workspace.rugby_analytics` and builds views and marts in `workspace.rugby_dbt`. The 2024–25 model was run previously: five models and 22 data tests passed. The expanded five-season model has seven models and additional fixture checks; it parses locally but **has not yet been built against the updated workspace tables**.
+dbt reads the current season-snapshot Silver tables in `workspace.rugby_analytics` and builds views and marts in `workspace.rugby_dbt`. On 29 September 2026, the expanded five-season build completed **seven models and 31 passing data tests** with no warnings or errors. A separate count query confirmed 755 fixtures, 688 match facts, 67 without a source result and 1,376 team appearances. The earlier 2024–25-only build had five models and 22 passing tests.
 
 After [the five-season Databricks ingestion](../free-edition/README.md), set your SQL warehouse connection values and run from this directory:
 

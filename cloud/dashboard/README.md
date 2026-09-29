@@ -1,6 +1,6 @@
 # Five-season rugby dashboard datasets
 
-These read-only queries use the `workspace.rugby_dbt` marts. Run the [five-season dbt build](../dbt/README.md) before replacing dashboard datasets. The existing 2024–25 three-view dashboard was built manually; these multi-season queries and the two new views have **not** been run in that dashboard yet.
+These read-only queries use the `workspace.rugby_dbt` marts. The [five-season dbt build](../dbt/README.md) has passed; the existing 2024–25 three-view dashboard was built manually. These multi-season queries and the two new views have **not** been run in that dashboard yet.
 
 | Query | Suggested view | Meaning |
 | --- | --- | --- |

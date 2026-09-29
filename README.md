@@ -13,13 +13,11 @@ flowchart LR
     C --> D[PySpark ingestion]
     D --> E[Bronze: raw match versions]
     D --> F[Silver: fixture snapshots, match and player versions]
-    F --> G[Gold: match fact, team dimension and season marts]
-    F --> H[dbt models and quality tests]
+    F --> G[dbt Gold: facts, dimensions, marts and tests]
     G --> I[Databricks dashboard / Power BI Desktop]
-    H --> I
 ```
 
-The supported no-cost development path uses a Databricks Free Edition managed Volume as cloud storage, serverless Delta tables, local dbt Core and Power BI Desktop. The Airflow DAG is an executable deployment draft and has **not** run in an Airflow instance yet. The available Free Edition workspace is on AWS; the older Azure ADLS script under `cloud/databricks/` is an alternative draft, not part of this verified path. See [cloud setup](cloud/README.md).
+The supported no-cost development path uses a Databricks Free Edition managed Volume as cloud storage, serverless Delta tables, local dbt Core and Power BI Desktop. PySpark owns Bronze and Silver; dbt owns Gold. The separate Gold notebook is a comparison implementation, not a required pipeline step. The Airflow DAG is a deployment draft and has **not** run in an Airflow instance yet. The available Free Edition workspace is on AWS; the older Azure ADLS script under `cloud/databricks/` is an alternative draft, not part of this verified path. See [cloud setup](cloud/README.md).
 
 ## Source and scope
 
@@ -51,7 +49,7 @@ Prepare the managed-Volume uploads with `rugby-lakehouse prepare-landing --all-s
 | --- | --- | --- |
 | Bronze | `bronze_event` / `bronze_match_versions` | Raw changed records and source hashes |
 | Silver | `silver_fixture`; match, appearance and event tables / Delta version tables and season manifest | Current fixture snapshots and completed match detail |
-| Gold | `dim_team`, `fact_match`, `gold_team_season` / Delta and dbt marts | Team and match analytics by season |
+| Gold | `dim_team`, `fact_match`, `gold_team_season` / dbt marts | Team and match analytics by season |
 
 Checks cover duplicate keys, status and score consistency, score-event reconciliation, two team appearances per match, fact counts, team points versus match points, and referential integrity in dbt. A published 2022–23 result has no scoring events; the check reports this **one source-quality exception** rather than inventing events. See [audit](docs/multiseason-audit.md).
 

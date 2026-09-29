@@ -1,4 +1,4 @@
-"""Manual Airflow backfill: source JSON -> managed Volume -> Delta notebooks -> dbt."""
+"""Manual Airflow backfill: source JSON -> managed Volume -> PySpark Silver -> dbt Gold."""
 
 from datetime import datetime, timedelta, timezone
 import os
@@ -55,13 +55,7 @@ def rugby_urc_pipeline():
         uploaded >> ingested
         previous = ingested
 
-    gold = DatabricksRunNowOperator(
-        task_id="build_gold",
-        databricks_conn_id="databricks_default",
-        job_id=int(Variable.get("rugby_gold_job_id", default_var="0")),
-        wait_for_termination=True,
-    )
-    previous >> gold >> build_dbt()
+    previous >> build_dbt()
 
 
 rugby_urc_pipeline()

@@ -24,10 +24,8 @@ Expected **after all five files**: 755 current fixtures, 688 current completed m
 
 The notebook writes append-only Bronze raw versions, append-only completed match and player versions, versioned fixture rows, and a season snapshot manifest. The manifest is published after its rows so current-state readers use only a complete season snapshot. Previous 2024–25 Delta data remains in its version tables; a new `transform_version` is added for the five-season design.
 
-## 3. Build Gold and dbt
+## 3. Build dbt Gold
 
-Update or import [gold_notebook.py](gold_notebook.py), then run it once. It creates `gold_fixture_schedule`, `dim_team`, `fact_match`, `gold_team_season` and `gold_player_scoring` as managed Delta tables and checks row and point reconciliation. Expected totals after all seasons: 755 fixtures, 67 without a result, 688 match facts and 1,376 team appearances. The previous 2024–25 Gold run alone was verified at 151 facts, 16 teams and 7,313 match points; the five-season totals are not yet verified in Databricks.
-
-Then run `dbt build --profiles-dir .` in [cloud/dbt](../dbt/README.md). The dbt project reads current Silver snapshots and builds an independent set of analytical tables and tests. Lastly, refresh the [dashboard datasets](../dashboard/README.md) or connect [Power BI Desktop](../powerbi/README.md).
+Run `dbt build --profiles-dir .` in [cloud/dbt](../dbt/README.md). dbt reads current Silver snapshots and builds the Gold analytical tables and tests. Expected totals after all seasons: 755 fixtures, 67 without a result, 688 match facts and 1,376 team appearances. The previous 2024–25 Gold notebook run alone was verified at 151 facts, 16 teams and 7,313 match points; the five-season dbt totals are not yet verified in Databricks. The [Gold notebook](gold_notebook.py) is retained as a comparison implementation and is not required for the main pipeline. Lastly, refresh the [dashboard datasets](../dashboard/README.md) or connect [Power BI Desktop](../powerbi/README.md).
 
 Databricks [managed Volume files](https://docs.databricks.com/aws/en/volumes/volume-files) and [Free Edition limits](https://docs.databricks.com/aws/en/getting-started/free-edition-limitations) are documented by Databricks. Free Edition has quotas, so a five-season backfill may need to be split across days.

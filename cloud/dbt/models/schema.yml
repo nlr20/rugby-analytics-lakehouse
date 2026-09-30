@@ -102,6 +102,29 @@ models:
                 field: team_id
       - name: player
         tests: [not_null]
+  - name: scoring_event
+    description: Listed scoring attempts and scores for the current completed match versions, including missed kicks.
+    columns:
+      - name: event_id
+        tests: [not_null, unique]
+      - name: match_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('fact_match')
+                field: match_id
+      - name: team_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_team')
+                field: team_id
+      - name: minute
+        tests: [not_null]
+      - name: points
+        tests: [not_null]
   - name: fixture_schedule
     description: Current published snapshot of completed fixtures and fixtures whose results are unavailable in the source.
     columns:

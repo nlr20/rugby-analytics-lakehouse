@@ -1,6 +1,6 @@
 # dbt on Databricks Free Edition
 
-dbt reads the current season-snapshot Silver tables in `workspace.rugby_analytics` and builds views and marts in `workspace.rugby_dbt`. On 29 September 2026, the five-season build completed **seven models and 31 passing data tests** with no warnings or errors. A separate count query confirmed 755 fixtures, 688 match facts, 67 without a source result and 1,376 team appearances. A new `team_match` model, one row per team per completed match, was then built with seven passing tests. The project now contains eight models and 38 tests; a fresh full build of all eight models has not yet been run. The earlier 2024–25-only build had five models and 22 passing tests.
+dbt reads the current season-snapshot Silver tables in `workspace.rugby_analytics` and builds views and marts in `workspace.rugby_dbt`. On 30 September 2026, the full five-season build completed **nine models and 46 passing data tests** with no warnings or errors. Counts confirmed 755 fixtures, 688 match facts, 67 without a source result, 1,376 team appearances and 10,870 current scoring events. The earlier 2024–25-only build had five models and 22 passing tests.
 
 After [the five-season Databricks ingestion](../free-edition/README.md), set your SQL warehouse connection values and run from this directory:
 
@@ -11,6 +11,6 @@ dbt debug --profiles-dir .
 dbt build --profiles-dir .
 ```
 
-The committed [profile](profiles.yml) uses browser OAuth and contains no token. `stg_current_fixtures` selects the latest published snapshot for each season. `stg_latest_matches` keeps only completed fixture versions. Team and match marts, team-level venue results, player scoring, and fixture schedule follow. Tests check keys, team relationships, match versus team points, team appearances and venue outcomes, and fixture status reconciliation. One 2022–23 match lacks published scoring events; the score-event exception is surfaced by the ingestion and local audit instead of being treated as a complete event history.
+The committed [profile](profiles.yml) uses browser OAuth and contains no token. `stg_current_fixtures` selects the latest published snapshot for each season. `stg_latest_matches` keeps only completed fixture versions. Team and match marts, team-level venue results, player scoring, current scoring events, and fixture schedule follow. Tests check keys, team relationships, match versus team points, team appearances and venue outcomes, and fixture status reconciliation. One 2022–23 match lacks published scoring events; the score-event exception is surfaced by the ingestion and local audit instead of being treated as a complete event history. Across the five seasons, event points total 33,421 versus 33,477 final-score points; the 56-point gap is that match's 35–21 score.
 
 See Databricks' [dbt Core connection guide](https://docs.databricks.com/aws/en/partners/prep/dbt) for OAuth and SQL warehouse details. The Free Edition warehouse has usage quotas.

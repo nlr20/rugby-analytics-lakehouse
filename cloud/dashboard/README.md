@@ -1,6 +1,6 @@
 # Five-season rugby dashboard datasets
 
-These read-only queries use the `workspace.rugby_dbt` marts. The [five-season dbt build](../dbt/README.md) has passed; the existing 2024–25 three-view dashboard was built manually. These multi-season queries and the two new views have **not** been run in that dashboard yet.
+These read-only queries use the `workspace.rugby_dbt` marts. The first five datasets cover team performance, results by venue, player scoring, fixtures and team trends. The three additional datasets below extend the dashboard with close games, scoring patterns and head-to-head records.
 
 | Query | Suggested view | Meaning |
 | --- | --- | --- |
@@ -9,6 +9,9 @@ These read-only queries use the `workspace.rugby_dbt` marts. The [five-season db
 | [Player scoring](03_player_scoring.sql) | Table filtered by season and team | Top 20 listed try scorers per team and their recorded points |
 | [Fixture schedule](04_fixture_schedule.sql) | Table filtered by season/team/status | Results and fixtures whose result is unavailable in the source |
 | [Team trend](05_team_trend.sql) | Line chart | Team wins and point difference across seasons |
+| [Close games](06_close_games.sql) | Bars of `close_wins` and `close_losses` by `team_name` | Matches decided by five points or fewer, including playoffs; draws are listed separately |
+| [Scoring patterns](07_scoring_patterns.sql) | Bars of **Sum of `points`** by `match_period` or `event_type` | When points were scored and how; missed attempts contribute zero points |
+| [Head-to-head](08_head_to_head.sql) | Table of `opponent`, `played`, `wins`, `draws`, `losses` | A selected team's record against each opponent |
 
 In Databricks: **New > Dashboard > Data > Add SQL dataset**, paste a query and run it; add a widget on the Canvas. Add a `season` filter so viewers can compare like with like. The team-performance view is not an official league table: it includes playoff matches and does not calculate bonus points. Player scoring is based on listed events, which have one documented gap in 2022–23. Results marked `result_unavailable` may have dates in the past; the source snapshot has no final score for them.
 
@@ -21,11 +24,16 @@ In Databricks: **New > Dashboard > Data > Add SQL dataset**, paste a query and r
 | Player scoring | Several player rows per team per season | Many-to-one to Team performance on `season_team_key` |
 | Team trend | One row per team per season | Same `season_team_key` as Team performance |
 | Fixture Schedule | One row per fixture | `match_id`; team appears in either `home_team` or `away_team` |
+| Close games | One row per team per season | Same `season_team_key` as Team performance |
+| Scoring patterns | One row per listed event | Many-to-one to Team performance on `season_team_key` |
+| Head-to-head | One row per team, season and opponent | Many-to-one to Team performance on `season_team_key` |
 
 Fixture Schedule cannot use a single `season_team_key` without duplicating each fixture or losing the seven `TBC` fixtures. Its SQL accepts a `:team` parameter and filters on `home_team = :team OR away_team = :team`; `All` or null preserves the full schedule. In the dataset editor, set the parameter's default to `All` so the query can run before the dashboard filter is configured.
 
-In the dashboard Relationships editor, connect Team performance's `season_team_key` (one side) to the same field in Team results by venue, Player scoring, and Team Trend (many side). Team Trend currently has one row per team-season, but the editor offers only One-to-Many or Many-to-One. These relationships allow a selection in the team performance chart to filter the connected charts. Fixture Schedule still needs a separate team parameter because one fixture has both a home and an away team. A global Single value **Team** control can combine the team fields of the four related datasets with Fixture Schedule's `team` parameter; see [query-based field and parameter controls](https://docs.databricks.com/aws/en/dashboards/manage/filters/parameters).
+In the dashboard Relationships editor, connect Team performance's `season_team_key` (one side) to the same field in Team results by venue, Player scoring, Team Trend, Close games, Scoring patterns and Head-to-head (many side). Team Trend and Close games currently have one row per team-season, but the editor offers only One-to-Many or Many-to-One. These relationships allow a selection in the team performance chart to filter the connected charts. Fixture Schedule still needs a separate team parameter because one fixture has both a home and an away team. A global Single value **Team** control can combine the team fields of the related datasets with Fixture Schedule's `team` parameter; see [query-based field and parameter controls](https://docs.databricks.com/aws/en/dashboards/manage/filters/parameters).
 
 The venue dataset has two team appearances per completed match. Its pie chart should use `outcome` as the category and `Count(outcome)` as the value; an unfiltered chart therefore totals two appearances per match. Give it the title **Team results by venue** rather than treating it as the old whole-league home advantage count.
+
+Build the new `scoring_event` dbt mart before running dataset 07. Its event grain follows the latest completed version of each match, so a corrected source snapshot does not double count old events. The 2022–23 Glasgow Warriors versus Vodacom Bulls match has a final score but no listed scoring events, so scoring-pattern totals are incomplete for that match. The 2025–26 source snapshot has 67 fixtures without results; all three new insights use only completed matches. The team comparisons include knockout games and are not official league standings.
 
 See [Databricks dashboard datasets](https://docs.databricks.com/aws/en/dashboards/manage/data-modeling/datasets) and [visualization setup](https://docs.databricks.com/aws/en/dashboards/manage/visualizations).

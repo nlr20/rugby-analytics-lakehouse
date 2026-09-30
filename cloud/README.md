@@ -8,7 +8,7 @@ The working target is the existing AWS-hosted Databricks Free Edition workspace.
 | Five-season local Python pipeline | Run and checked; see [audit](../docs/multiseason-audit.md) |
 | Five-season Silver notebook and folder runner | Manually run: 755 fixtures, 688 results, 67 without results |
 | Five-season dbt Gold | Built: nine models and 46 passing tests; Gold counts reconciled |
-| Five-season dashboard SQL | Eight queries verified; first five workspace views are being configured manually, and three new views are ready to add |
+| Five-season dashboard SQL | Nine queries verified; existing workspace views are being configured manually, and the new close-game details view is ready to add |
 | [Airflow DAG](airflow/rugby_urc.py) | Prepared; not deployed or integration tested |
 | [Azure ADLS reader](databricks/ingest.py) | Separate draft; incompatible with this AWS-hosted Free Edition path as written |
 | Power BI report | [Connection and model plan](powerbi/README.md) prepared; no `.pbix` claimed |

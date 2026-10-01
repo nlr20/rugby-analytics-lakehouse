@@ -51,7 +51,7 @@ Prepare the managed-Volume uploads with `rugby-lakehouse prepare-landing --all-s
 | Silver | `silver_fixture`; match, appearance and event tables / Delta version tables and season manifest | Current fixture snapshots and completed match detail |
 | Gold | `dim_team`, `fact_match`, `gold_team_season` / dbt marts including `team_match` and `scoring_event` | Team, match and event analytics by season and venue |
 
-Checks cover duplicate keys, status and score consistency, score-event reconciliation, two team appearances per match, fact counts, team points versus match points, and referential integrity in dbt. A published 2022–23 result has no scoring events; the check reports this **one source-quality exception** rather than inventing events. See [audit](docs/multiseason-audit.md).
+Checks cover duplicate keys, status and score consistency, score-event reconciliation, two team appearances per match, fact counts, team points versus match points, and referential integrity in dbt. The initial community 2022–23 source had one scored match with no lineups or scoring events. A [single-match feed repair](docs/2022-23-match-repair.md) now supplies that detail locally; the Databricks Gold tables retain the earlier snapshot until the new landing file is ingested. See the [initial audit](docs/multiseason-audit.md).
 
 On 1 October 2026, the folder ingestion in Databricks reported 755 fixtures and 755 completed matches after the direct feed backfill, with one documented 2022–23 score-event discrepancy. The full dbt build completed nine models and 46 passing tests. Gold has 1,510 team appearances and 11,935 listed scoring events. The [dashboard queries](cloud/dashboard/README.md) include close games, scoring patterns and head-to-head views.
 

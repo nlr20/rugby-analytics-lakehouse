@@ -7,7 +7,7 @@ import json
 COMPETITION = "United Rugby Championship"
 SEASON = "2024-25"
 TRANSFORM_VERSION = 3
-TEAM_ALIASES = {"Emirates Lions": "Lions"}
+TEAM_ALIASES = {"Emirates Lions": "Lions", "Fidelity SecureDrive Lions": "Lions"}
 
 
 def canonical_team_name(name: str) -> str:

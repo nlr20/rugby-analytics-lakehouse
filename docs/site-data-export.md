@@ -32,6 +32,8 @@ The website loads `manifest.json` first. Its `datasets` entries contain a relati
 
 The manifest's `quality` section records reconciliation totals and the difference between listed event points and final-score points. This gap is currently 56 points: a 2022–23 Glasgow Warriors 35–21 Vodacom Bulls match lacks listed scoring events. The 2025–26 source snapshot has 67 `result_unavailable` fixtures, not necessarily future matches. Team wins include playoffs and are not official league-table standings.
 
+The [direct feed backfill](direct-api-backfill.md) now has all 151 2025–26 results locally. This exported manifest still reflects the older Databricks Gold snapshot until the new landing file is uploaded, ingested, checked with dbt and exported again.
+
 The exporter checks unique fixture and team keys, one home and one away appearance per completed match, fixture scores versus team scores, team-season appearance counts, and snapshot stability during extraction. It aborts before publishing a new manifest if a check fails.
 
 ## Public release boundary

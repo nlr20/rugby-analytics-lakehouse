@@ -6,7 +6,7 @@ The working target is the existing AWS-hosted Databricks Free Edition workspace.
 | --- | --- |
 | 2024–25 Volume ingestion, Delta Gold, dbt and dashboard | Manually run and verified earlier |
 | Five-season local Python pipeline | Run and checked; see [audit](../docs/multiseason-audit.md) |
-| Five-season Silver notebook and folder runner | Manually run: 755 fixtures, 688 results, 67 without results |
+| Five-season Silver notebook and folder runner | Manually run: 755 fixtures and 755 results after the 2025–26 backfill |
 | Five-season dbt Gold | Built: nine models and 46 passing tests; Gold counts reconciled |
 | Five-season dashboard SQL | Nine queries verified; existing workspace views are being configured manually, and the new close-game details view is ready to add |
 | [Airflow DAG](airflow/rugby_urc.py) | Prepared; not deployed or integration tested |

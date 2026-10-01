@@ -21,8 +21,8 @@ The supported no-cost development path uses a Databricks Free Edition managed Vo
 
 ## Source and scope
 
-- Source: [transientlunatic/Rugby-Data JSON](https://github.com/transientlunatic/Rugby-Data/tree/master/json), files `celtic-2021-2022.json` through `celtic-2025-2026.json`. The [five-season audit](docs/multiseason-audit.md) records hashes, coverage and known data gaps. No upstream dataset is committed.
-- All five files contain 151 fixture rows. The latest available 2025–26 snapshot has 84 scored results and 67 fixtures with no result. Their dates have passed, so the project calls them **result unavailable in source** rather than upcoming games.
+- Source: [transientlunatic/Rugby-Data JSON](https://github.com/transientlunatic/Rugby-Data/tree/master/json) for 2021–22 through 2024–25, plus a [direct feed backfill](docs/direct-api-backfill.md) for the completed 2025–26 season. The [five-season audit](docs/multiseason-audit.md) records the earlier community snapshots and their known gaps. No source dataset is committed.
+- Each season now has 151 completed matches in the current Databricks snapshot. The community 2025–26 file stopped at 84 results; the direct feed backfill supplied the remaining results and match details.
 - Player coverage means lineup appearances and listed scoring events. The source does not support claims about tackles, carries or complete individual performance.
 - The source is a snapshot, not a change feed. Each match and each whole-season snapshot has a content hash. Re-reading an identical snapshot creates no new match version. A corrected score or lineup creates a new version; Bronze preserves the older raw record.
 - The source does not publish a fixture ID. For named teams, the key uses competition, season, phase, round and teams. `TBC` fixtures use a temporary source-position key; a later named result replaces the placeholder in the current season snapshot.
@@ -39,7 +39,7 @@ rugby-lakehouse summary --season 2024-25
 python -m pytest -q
 ```
 
-`sync --all-seasons` fetches the five audited historical files. Use `--season 2025-26` to process one season, or `--input path/to/celtic-2025-2026.json --season 2025-26` for an offline file. A future consecutive season such as `2026-27` works with `--season 2026-27` when its upstream file exists. Generated data is ignored under `data/`. Re-run `sync`; `changed_matches` should be zero when source contents are unchanged.
+`sync --all-seasons` fetches the five audited community files, including the incomplete 2025–26 file. Use the [direct feed extractor](docs/direct-api-backfill.md) and `--input data/source/celtic-2025-2026-api.json --season 2025-26` to reproduce the complete season. A future consecutive season such as `2026-27` works with `--season 2026-27` when its upstream file exists. Generated data is ignored under `data/`. Re-run `sync`; `changed_matches` should be zero when source contents are unchanged.
 
 Prepare the managed-Volume uploads with `rugby-lakehouse prepare-landing --all-seasons`, or use `--season YYYY-YY` for a weekly update. Each JSONL line contains the unchanged upstream `raw` record and the normalized `match` record. The filename includes season, transform version and a snapshot hash, so a changed upstream file creates a new landing name. The [folder ingestion notebook](cloud/free-edition/ingest_folder_notebook.py) discovers and processes new snapshots without changing a widget for each file. See the [manual Free Edition guide](cloud/free-edition/README.md).
 
@@ -53,8 +53,8 @@ Prepare the managed-Volume uploads with `rugby-lakehouse prepare-landing --all-s
 
 Checks cover duplicate keys, status and score consistency, score-event reconciliation, two team appearances per match, fact counts, team points versus match points, and referential integrity in dbt. A published 2022–23 result has no scoring events; the check reports this **one source-quality exception** rather than inventing events. See [audit](docs/multiseason-audit.md).
 
-The local five-season run produced 755 fixture rows, 688 scored matches, 67 fixtures without results, 31,602 player appearances and 10,870 listed scoring events. A repeated run added zero changed match versions. On 29 September 2026, the folder ingestion in Databricks reported the same 755 fixtures, 688 results, 67 unavailable results and one documented score-event discrepancy. On 30 September 2026, the full dbt build completed nine models and 46 passing tests. The Gold tables contain 755 fixtures, 688 match facts, 1,376 team appearances and 10,870 current scoring events. The [dashboard queries](cloud/dashboard/README.md) include close games, scoring patterns and head-to-head views.
+On 1 October 2026, the folder ingestion in Databricks reported 755 fixtures and 755 completed matches after the direct feed backfill, with one documented 2022–23 score-event discrepancy. The full dbt build completed nine models and 46 passing tests. Gold has 1,510 team appearances and 11,935 listed scoring events. The [dashboard queries](cloud/dashboard/README.md) include close games, scoring patterns and head-to-head views.
 
 For a future public career-site app, a [versioned JSON exporter](docs/site-data-export.md) prepares a local, validated copy of selected Gold results. Generated data is ignored by Git and has not been published.
 
-The community 2025–26 snapshot stopped at January 2026. A [direct feed backfill](docs/direct-api-backfill.md) now builds a complete local season JSON and landing file from the same underlying rugby feed; it has not yet been uploaded to Databricks.
+The community 2025–26 snapshot stopped at January 2026. The [direct feed backfill](docs/direct-api-backfill.md) builds a complete season JSON and landing file from the same underlying rugby feed; the updated snapshot has been ingested into Databricks and included in the current local site export.

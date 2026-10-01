@@ -1,5 +1,7 @@
 # Five-season source audit
 
+This records the **initial 28 September 2026 community-source audit**. The [direct-feed backfill](direct-api-backfill.md) subsequently completed 2025–26; the current Databricks and site-export counts are 755 completed matches and zero results unavailable.
+
 Source: [transientlunatic/Rugby-Data `json` directory](https://github.com/transientlunatic/Rugby-Data/tree/master/json). Files were fetched from the repository's `master` branch on 28 September 2026. The source files stay under ignored `data/source/`; the repository contains code and this audit, not copies of upstream data. SHA-256 below is for each downloaded raw file. The landing name uses a separate canonical JSON snapshot hash and transform version 3.
 
 | Season | Source file | Raw SHA-256 | Fixtures | Results | Result unavailable | Landing file |

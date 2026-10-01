@@ -33,7 +33,7 @@ The 1 October 2026 extraction produced `data/source/celtic-2025-2026-api.json`, 
 | Score changes among those 84 fixtures | 0 |
 | Second local sync, changed match versions | 0 |
 
-The normalized landing file is `data/landing/urc-2025-26-v3-99bac3bd84e1.jsonl`. Upload **that file** to the Databricks landing Volume, then run the folder ingestion notebook and `dbt build`. Only after those succeed should the site JSON exporter be run again. The existing Databricks Gold tables and site JSON export still show the old incomplete snapshot until these manual steps are completed.
+The normalized landing file is `data/landing/urc-2025-26-v3-99bac3bd84e1.jsonl`. On 1 October 2026 it was uploaded to the Databricks landing Volume. The folder ingestion reported 755 current fixtures, 755 completed matches, no unavailable results, and the one already documented 2022–23 score-event discrepancy. The subsequent dbt build passed all nine models and 46 tests. The local site JSON export was refreshed: its manifest reports 755 completed matches and zero unavailable results.
 
 The feed uses both `Lions` and `Fidelity SecureDrive Lions` in this season. The local transform maps the sponsor name to the canonical `Lions`, preserving cross-season team identity. Bronze keeps the original feed name.
 

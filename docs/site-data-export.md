@@ -30,12 +30,10 @@ The website loads `manifest.json` first. Its `datasets` entries contain a relati
 | `scoring_patterns.json` | One row per team-season-period-event type | Event counts and points by type and match period |
 | `stadiums.json` | One row per named stadium | Stadium inventory awaiting verified coordinates; **not yet map points** |
 
-The manifest's `quality` section records reconciliation totals and the difference between listed event points and final-score points. This gap is currently 56 points: a 2022–23 Glasgow Warriors 35–21 Vodacom Bulls match lacks listed scoring events. The 2025–26 source snapshot has 67 `result_unavailable` fixtures, not necessarily future matches. Team wins include playoffs and are not official league-table standings.
-
-The [direct feed backfill](direct-api-backfill.md) now has all 151 2025–26 results locally. This exported manifest still reflects the older Databricks Gold snapshot until the new landing file is uploaded, ingested, checked with dbt and exported again.
+The manifest's `quality` section records reconciliation totals and the difference between listed event points and final-score points. This gap is currently 56 points: a 2022–23 Glasgow Warriors 35–21 Vodacom Bulls match lacks listed scoring events. The [direct feed backfill](direct-api-backfill.md) has supplied all 151 results for 2025–26, so the current export has 755 completed matches and zero unavailable results. Team wins include playoffs and are not official league-table standings.
 
 The exporter checks unique fixture and team keys, one home and one away appearance per completed match, fixture scores versus team scores, team-season appearance counts, and snapshot stability during extraction. It aborts before publishing a new manifest if a check fails.
 
 ## Public release boundary
 
-The [community rugby source](https://github.com/transientlunatic/Rugby-Data) has no clear reuse licence in the [source audit](source-audit.md). Confirm permission or switch to a licensed source before placing derived rugby records on a public site. The generated bundle stays under ignored `data/` until that decision. The map also needs a checked stadium-to-coordinate lookup and OpenStreetMap attribution before publication.
+The [community rugby source](https://github.com/transientlunatic/Rugby-Data) has no clear reuse licence in the [source audit](source-audit.md), and the direct match feed's public redistribution rights have not been confirmed. Confirm permission or switch to a licensed source before placing derived rugby records on a public site. The generated bundle stays under ignored `data/` until that decision. The map also needs a checked stadium-to-coordinate lookup and OpenStreetMap attribution before publication.

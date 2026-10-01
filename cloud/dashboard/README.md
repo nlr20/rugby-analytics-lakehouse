@@ -14,7 +14,7 @@ These read-only queries use the `workspace.rugby_dbt` marts. The first five data
 | [Scoring patterns](07_scoring_patterns.sql) | Bars of **Sum of `points`** by `match_period` or `event_type` | When points were scored and how; missed attempts contribute zero points |
 | [Head-to-head](08_head_to_head.sql) | Table of `opponent`, `played`, `wins`, `draws`, `losses` | A selected team's record against each opponent |
 
-In Databricks: **New > Dashboard > Data > Add SQL dataset**, paste a query and run it; add a widget on the Canvas. Add a `season` filter so viewers can compare like with like. The team-performance view is not an official league table: it includes playoff matches and does not calculate bonus points. Player scoring is based on listed events, which have one documented gap in 2022–23. Results marked `result_unavailable` may have dates in the past; the source snapshot has no final score for them.
+In Databricks: **New > Dashboard > Data > Add SQL dataset**, paste a query and run it; add a widget on the Canvas. Add a `season` filter so viewers can compare like with like. The team-performance view is not an official league table: it includes playoff matches and does not calculate bonus points. Player scoring is based on listed events, which have one documented gap in 2022–23. The current five-season snapshot has no fixtures with `result_unavailable` status.
 
 ## How the datasets relate
 
@@ -36,6 +36,6 @@ In the dashboard Relationships editor, connect Team performance's `season_team_k
 
 The venue dataset has two team appearances per completed match. Its pie chart should use `outcome` as the category and `Count(outcome)` as the value; an unfiltered chart therefore totals two appearances per match. Give it the title **Team results by venue** rather than treating it as the old whole-league home advantage count.
 
-Build the new `scoring_event` dbt mart before running dataset 07. Its event grain follows the latest completed version of each match, so a corrected source snapshot does not double count old events. The 2022–23 Glasgow Warriors versus Vodacom Bulls match has a final score but no listed scoring events, so scoring-pattern totals are incomplete for that match. The 2025–26 source snapshot has 67 fixtures without results; all three new insights use only completed matches. The team comparisons include knockout games and are not official league standings.
+The `scoring_event` dbt mart follows the latest completed version of each match, so the 2025–26 backfill does not double count old events. The 2022–23 Glasgow Warriors versus Vodacom Bulls match has a final score but no listed scoring events, so scoring-pattern totals are incomplete for that match. All five current season snapshots have 151 completed matches. The team comparisons include knockout games and are not official league standings.
 
 See [Databricks dashboard datasets](https://docs.databricks.com/aws/en/dashboards/manage/data-modeling/datasets) and [visualization setup](https://docs.databricks.com/aws/en/dashboards/manage/visualizations).

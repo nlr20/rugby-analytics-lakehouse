@@ -22,7 +22,7 @@ Import [ingest_notebook.py](ingest_notebook.py) and [ingest_folder_notebook.py](
 
 The folder runner reports previously loaded files as `already_loaded`; it processes each new snapshot once. A second run with no changed input should process nothing. If a source update changes a match, `prepare-landing --season YYYY-YY` creates a new content-hashed filename; upload it and rerun the folder notebook. For 2025–26, pass the direct-feed JSON with `--input` to avoid regenerating the old incomplete community snapshot. An overwritten stable filename such as `urc-2026-27.jsonl` also works if its internal snapshot hash is regenerated when the content changes. Do not manually edit that hash.
 
-**Observed after the 2025–26 backfill on 1 October 2026:** 755 current fixtures, 755 completed matches, zero fixtures without results, and one score-event discrepancy. The 2022–23 discrepancy is documented in the audit; investigate any additional discrepancy before using the marts.
+**Observed after both repairs on 1 October 2026:** 755 current fixtures, 755 completed matches, zero fixtures without results, and zero score-event discrepancies. The older 2022–23 snapshot remains in the version tables; the latest snapshot includes its repaired player and scoring detail.
 
 The notebook writes append-only Bronze raw versions, append-only completed match and player versions, versioned fixture rows, and a season snapshot manifest. The manifest is published after its rows so current-state readers use only a complete season snapshot. Previous 2024–25 Delta data remains in its version tables; a new `transform_version` is added for the five-season design.
 

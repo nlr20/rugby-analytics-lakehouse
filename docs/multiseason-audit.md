@@ -1,6 +1,6 @@
 # Five-season source audit
 
-This records the **initial 28 September 2026 community-source audit**. The [direct-feed backfill](direct-api-backfill.md) subsequently completed 2025–26; the current Databricks and site-export counts are 755 completed matches and zero results unavailable.
+This records the **initial 28 September 2026 community-source audit**. The [direct-feed backfill](direct-api-backfill.md) subsequently completed 2025–26, and the [single-match repair](2022-23-match-repair.md) filled the missing 2022–23 detail. The current Databricks and site-export counts are 755 completed matches, zero results unavailable and zero score-event discrepancies.
 
 Source: [transientlunatic/Rugby-Data `json` directory](https://github.com/transientlunatic/Rugby-Data/tree/master/json). Files were fetched from the repository's `master` branch on 28 September 2026. The source files stay under ignored `data/source/`; the repository contains code and this audit, not copies of upstream data. SHA-256 below is for each downloaded raw file. The landing name uses a separate canonical JSON snapshot hash and transform version 3.
 
@@ -18,7 +18,7 @@ Source: [transientlunatic/Rugby-Data `json` directory](https://github.com/transi
 
 - The 2025–26 file has results through 31 January 2026. Its 67 null-score fixture dates run from 21 February through 20 June 2026. As of this audit date they are past dates, so `result_unavailable` is an honest source status; it does not mean the matches are still upcoming. Seven of these rows use `TBC` team placeholders.
 - The 2023–24 source uses both `Emirates Lions` and `Lions`. Silver maps the former to `Lions` so trends use one club. Bronze preserves the original spelling.
-- The 2022–23 Glasgow Warriors 35–21 Vodacom Bulls fixture dated 8 October 2022 has no listed scoring events for either side. Final-score team metrics use the published score; player-event metrics cannot recover the missing detail. The quality check reports one discrepancy. Other scored matches reconcile after penalty tries are valued at seven points, including their automatic conversion.
+- The initial community file's 2022–23 Glasgow Warriors 35–21 Vodacom Bulls fixture dated 8 October 2022 has no listed scoring events for either side. The initial quality check therefore reported one discrepancy; the later [single-match repair](2022-23-match-repair.md) recovered its lineups and events from the match feed. Other scored matches reconciled after penalty tries were valued at seven points, including their automatic conversion.
 - There is no upstream fixture ID. Named fixtures are keyed by season, phase, round and teams. A correction to those identity fields appears as a replacement fixture in the current season snapshot; Bronze retains the earlier raw record. `TBC` rows are keyed by source position and replaced when named teams arrive.
 - Lineups and scoring events support appearances, tries and recorded points. They do not measure all player performance. Team wins include playoff fixtures and are not official league standings with bonus points.
 

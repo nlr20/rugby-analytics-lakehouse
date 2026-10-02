@@ -2,6 +2,14 @@
 
 This is a **local development** Airflow instance in Docker. It mounts the repository at `/opt/rugby` and reads the ignored JSON files under `data/source`. It uploads a content-hashed JSONL file to the existing Databricks managed Volume, runs the Databricks folder-ingestion notebook job, then runs dbt Gold. The default DAG is manual-triggered and starts with 2025–26 only; set `RUGBY_SEASONS` in `.env` to a comma-separated list for a wider backfill.
 
+## What a run does
+
+1. **`upload_2025_26` (Airflow container):** With the default `RUGBY_SEASONS=2025-26`, read the local `data/source/celtic-2025-2026-api.json`, validate and convert its 151 fixtures to a versioned JSONL file, then upload that file to `/Volumes/workspace/rugby_analytics/landing/`. Add another season to `RUGBY_SEASONS` to create a separate upload task for it. Each run reads the selected local file again; updated contents produce a different snapshot hash and landing filename.
+2. **`ingest_landing_folder` (Databricks job):** Airflow starts job `RUGBY_INGEST_JOB_ID` and waits for it. The job's folder notebook scans **all** matching JSONL files already in the landing Volume, not just the file uploaded by this run. It checks each file's internal season and snapshot hash against `silver_season_snapshots`, skips snapshots already loaded, and calls `ingest_notebook.py` for each new snapshot. That PySpark notebook writes raw versions to Bronze and current fixture, match, player and event versions to Silver Delta tables.
+3. **`build_dbt` (Airflow container, SQL on Databricks):** After ingestion succeeds, dbt Core runs inside the local Docker container. Through the Databricks SQL warehouse it builds Gold models from the current Silver tables and runs their data tests. The Databricks Gold notebook is not used by this DAG.
+
+The tasks run in that order; a failure stops the later tasks. Open the DAG run in Airflow and select each task's **Logs** to see the upload choice, Databricks job run ID, and dbt model/test results. The folder notebook's own `processed`/`already_loaded` report is visible in its Databricks job output when that output is available; Airflow currently records the Databricks job result rather than that notebook printout. The DAG has no schedule by default. Re-triggering it with unchanged local JSON uploads the same content-hashed file and should add no new Silver snapshot; dbt still rebuilds and retests Gold.
+
 ## One-time setup
 
 1. Start Docker Desktop and wait until the engine is running.

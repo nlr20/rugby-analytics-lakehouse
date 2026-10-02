@@ -2,7 +2,7 @@
 
 **Question:** How do fixtures, teams, player scoring and team performance change across five United Rugby Championship seasons?
 
-This is the flagship data engineering project in the portfolio. The local reference pipeline has processed the 2021–22 through 2025–26 `celtic` JSON snapshots. It keeps raw versions, models current fixtures separately from completed results, handles source corrections, and produces team-season metrics. The five-season Databricks Silver ingestion and dbt Gold build have now been run and reconciled in the Free Edition workspace. Airflow orchestration and Power BI reporting remain to be deployed.
+This is the flagship data engineering project in the portfolio. The local reference pipeline has processed the 2021–22 through 2025–26 `celtic` JSON snapshots. It keeps raw versions, models current fixtures separately from completed results, handles source corrections, and produces team-season metrics. The five-season Databricks Silver ingestion and dbt Gold build have been run and reconciled in the Free Edition workspace. A local Airflow run has now orchestrated one unchanged season snapshot through upload, ingestion and dbt; Power BI reporting remains deferred.
 
 ## Architecture
 
@@ -17,7 +17,7 @@ flowchart LR
     G --> I[Databricks dashboard / Power BI Desktop]
 ```
 
-The supported no-cost development path uses a Databricks Free Edition managed Volume as cloud storage, serverless Delta tables and dbt Core. PySpark owns Bronze and Silver; dbt owns Gold. The separate Gold notebook is a comparison implementation, not a required pipeline step. A [local Docker Airflow setup](cloud/airflow/README.md) now registers the DAG, but the Databricks task chain has **not** completed an Airflow run. Power BI is deferred. The available Free Edition workspace is on AWS; the older Azure ADLS script under `cloud/databricks/` is an alternative draft, not part of this verified path. See [cloud setup](cloud/README.md).
+The supported no-cost development path uses a Databricks Free Edition managed Volume as cloud storage, serverless Delta tables and dbt Core. PySpark owns Bronze and Silver; dbt owns Gold. The separate Gold notebook is a comparison implementation, not a required pipeline step. The [local Docker Airflow setup](cloud/airflow/README.md) completed one manual run for the unchanged 2025–26 snapshot: upload, Databricks ingestion job and dbt Gold all succeeded. Power BI is deferred. The available Free Edition workspace is on AWS; the older Azure ADLS script under `cloud/databricks/` is an alternative draft, not part of this verified path. See [cloud setup](cloud/README.md).
 
 ## Source and scope
 

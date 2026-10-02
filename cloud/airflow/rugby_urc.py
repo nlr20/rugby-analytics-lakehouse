@@ -1,4 +1,4 @@
-"""Manual Airflow backfill: source JSON -> managed Volume -> PySpark Silver -> dbt Gold."""
+"""Local season JSON -> managed Volume -> PySpark Silver -> dbt Gold."""
 
 from datetime import datetime, timedelta, timezone
 import os
@@ -11,11 +11,12 @@ from airflow.providers.databricks.operators.databricks import DatabricksRunNowOp
 from databricks.sdk import WorkspaceClient
 
 from rugby_lakehouse.landing import write_landing_file
+from rugby_lakehouse.pipeline_sources import selected_source_path, upload_landing_file
 from rugby_lakehouse.source import SEASONS, read_matches, source_file
 
 
 @dag(
-    dag_id="rugby_urc_five_seasons",
+    dag_id="rugby_urc_pipeline",
     start_date=datetime(2026, 1, 1, tzinfo=timezone.utc),
     schedule=os.environ.get("RUGBY_AIRFLOW_SCHEDULE") or None,
     catchup=False,
@@ -26,11 +27,17 @@ from rugby_lakehouse.source import SEASONS, read_matches, source_file
 def rugby_urc_pipeline():
     @task
     def prepare_and_upload(season: str) -> str:
-        matches = read_matches(season=season)
+        repo = Path(os.environ["RUGBY_REPO_DIR"])
+        source_dir = Path(os.environ.get("RUGBY_SOURCE_DIR", repo / "data" / "source"))
+        source_path = selected_source_path(source_dir, season)
+        matches = read_matches(path=source_path, season=season)
+        if not matches:
+            raise ValueError(f"Selected source has no fixtures: {source_path}")
         landing = write_landing_file(matches, Path(os.environ["RUGBY_LANDING_DIR"]), season)
         local_file = Path(landing["landing_file"])
         remote_file = f"/Volumes/workspace/rugby_analytics/landing/{local_file.name}"
-        WorkspaceClient().files.upload_from(remote_file, str(local_file), overwrite=True)
+        upload_landing_file(WorkspaceClient(), local_file, remote_file)
+        print(f"{season}: {source_path.name} -> {remote_file} ({landing['matches']} fixtures)")
         return remote_file
 
     @task

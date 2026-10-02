@@ -5,9 +5,7 @@ import os
 from pathlib import Path
 import subprocess
 
-from airflow.decorators import dag, task
-from airflow.models import Variable
-from airflow.providers.databricks.operators.databricks import DatabricksRunNowOperator
+from airflow.sdk import dag, task
 from databricks.sdk import WorkspaceClient
 
 from rugby_lakehouse.landing import write_landing_file
@@ -41,10 +39,16 @@ def rugby_urc_pipeline():
         return remote_file
 
     @task
+    def ingest_landing_folder() -> None:
+        job_id = int(os.environ["RUGBY_INGEST_JOB_ID"])
+        run = WorkspaceClient().jobs.run_now_and_wait(job_id, timeout=timedelta(minutes=45))
+        print(f"Databricks ingestion job {job_id} completed: run {run.run_id}")
+
+    @task
     def build_dbt() -> None:
         project = Path(os.environ["RUGBY_REPO_DIR"]) / "cloud" / "dbt"
         subprocess.run(["dbt", "build", "--profiles-dir", str(project),
-                        "--project-dir", str(project)], check=True)
+                        "--project-dir", str(project), "--target", "airflow"], check=True)
 
     seasons = [value.strip() for value in os.environ.get(
         "RUGBY_SEASONS", ",".join(SEASONS)).split(",") if value.strip()]
@@ -60,13 +64,7 @@ def rugby_urc_pipeline():
             previous >> uploaded
         previous = uploaded
 
-    ingested = DatabricksRunNowOperator(
-        task_id="ingest_landing_folder",
-        databricks_conn_id="databricks_default",
-        job_id=int(Variable.get("rugby_ingest_job_id", default_var="0")),
-        wait_for_termination=True,
-    )
-    previous >> ingested >> build_dbt()
+    previous >> ingest_landing_folder() >> build_dbt()
 
 
 rugby_urc_pipeline()

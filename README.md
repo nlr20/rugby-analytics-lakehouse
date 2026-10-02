@@ -17,7 +17,7 @@ flowchart LR
     G --> I[Databricks dashboard / Power BI Desktop]
 ```
 
-The supported no-cost development path uses a Databricks Free Edition managed Volume as cloud storage, serverless Delta tables, local dbt Core and Power BI Desktop. PySpark owns Bronze and Silver; dbt owns Gold. The separate Gold notebook is a comparison implementation, not a required pipeline step. The Airflow DAG is a deployment draft and has **not** run in an Airflow instance yet. The available Free Edition workspace is on AWS; the older Azure ADLS script under `cloud/databricks/` is an alternative draft, not part of this verified path. See [cloud setup](cloud/README.md).
+The supported no-cost development path uses a Databricks Free Edition managed Volume as cloud storage, serverless Delta tables and dbt Core. PySpark owns Bronze and Silver; dbt owns Gold. The separate Gold notebook is a comparison implementation, not a required pipeline step. A [local Docker Airflow setup](cloud/airflow/README.md) now registers the DAG, but the Databricks task chain has **not** completed an Airflow run. Power BI is deferred. The available Free Edition workspace is on AWS; the older Azure ADLS script under `cloud/databricks/` is an alternative draft, not part of this verified path. See [cloud setup](cloud/README.md).
 
 ## Source and scope
 

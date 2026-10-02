@@ -1,0 +1,30 @@
+services:
+  airflow:
+    build:
+      context: ../..
+      dockerfile: cloud/airflow/Dockerfile
+    command: standalone
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ../..:/opt/rugby
+      - airflow_state:/opt/airflow
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      AIRFLOW_HOME: /opt/airflow
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/rugby/cloud/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__PARALLELISM: "2"
+      AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG: "2"
+      PYTHONPATH: /opt/rugby/src
+      RUGBY_REPO_DIR: /opt/rugby
+      RUGBY_SOURCE_DIR: /opt/rugby/data/source
+      RUGBY_LANDING_DIR: /opt/rugby/data/landing
+      RUGBY_SEASONS: ${RUGBY_SEASONS:-2025-26}
+      DATABRICKS_HOST: https://dbc-ac97a731-fd87.cloud.databricks.com
+      DATABRICKS_HTTP_PATH: /sql/1.0/warehouses/225860b399aaa73c
+
+volumes:
+  airflow_state:

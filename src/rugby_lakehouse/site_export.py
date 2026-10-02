@@ -103,10 +103,23 @@ def _queries(catalog, schema):
         """,
         "stadiums": f"""
             SELECT stadium AS stadium_name, count(*) AS completed_matches,
-                   sum(CASE WHEN attendance IS NOT NULL THEN 1 ELSE 0 END) AS matches_with_attendance
+                   sum(CASE WHEN attendance IS NOT NULL THEN 1 ELSE 0 END) AS matches_with_attendance,
+                   sum(CASE WHEN home_score > away_score THEN 1 ELSE 0 END) AS listed_home_wins,
+                   sum(CASE WHEN home_score = away_score THEN 1 ELSE 0 END) AS draws,
+                   sum(CASE WHEN abs(home_score - away_score) <= 7 THEN 1 ELSE 0 END) AS close_matches,
+                   round(avg(home_score + away_score), 1) AS average_combined_points
             FROM {gold}.stg_latest_matches
             WHERE stadium IS NOT NULL
             GROUP BY stadium ORDER BY stadium
+        """,
+        "ground_matches": f"""
+            SELECT m.match_id, m.stadium AS stadium_name, m.season, m.played_at,
+                   m.round_type, m.round_number, m.home_team, m.away_team,
+                   m.home_score, m.away_score, m.attendance,
+                   CAST(NULL AS BOOLEAN) AS neutral_venue
+            FROM {gold}.stg_latest_matches m
+            WHERE m.stadium IS NOT NULL
+            ORDER BY m.season, m.played_at, m.match_id
         """,
     }
 
@@ -162,6 +175,44 @@ def validate_bundle(data):
     for row in team_seasons:
         if row["played"] != appearances_by_team[row["season"], row["team_id"]]:
             raise ValueError(f"Team-season appearances do not reconcile: {row['season']} {row['team_name']}")
+    ground_matches = data.get("ground_matches", [])
+    stadiums = data.get("stadiums", [])
+    if bool(ground_matches) != bool(stadiums):
+        raise ValueError("Ground match and stadium datasets must be exported together")
+    if ground_matches:
+        ground_ids = [row["match_id"] for row in ground_matches]
+        if len(ground_ids) != len(set(ground_ids)):
+            raise ValueError("Ground match IDs are not unique")
+        by_ground = {}
+        for row in ground_matches:
+            match_id = row["match_id"]
+            fixture = completed.get(match_id)
+            if fixture is None:
+                raise ValueError(f"Ground match has no completed fixture: {match_id}")
+            for field in ("season", "played_at", "round_type", "round_number", "home_team", "away_team", "home_score", "away_score"):
+                if row[field] != fixture[field]:
+                    raise ValueError(f"Ground match {field} disagrees with fixture: {match_id}")
+            if not row["stadium_name"] or row["attendance"] is not None and row["attendance"] < 0:
+                raise ValueError(f"Invalid ground or attendance: {match_id}")
+            if row["neutral_venue"] is not None:
+                raise ValueError("Neutral venue status is not verified in this source")
+            by_ground.setdefault(row["stadium_name"], []).append(row)
+        if len({row["stadium_name"] for row in stadiums}) != len(stadiums) or set(by_ground) != {row["stadium_name"] for row in stadiums}:
+            raise ValueError("Stadium names do not reconcile with ground matches")
+        for stadium in stadiums:
+            matches = by_ground[stadium["stadium_name"]]
+            expected = {
+                "completed_matches": len(matches),
+                "matches_with_attendance": sum(m["attendance"] is not None for m in matches),
+                "listed_home_wins": sum(m["home_score"] > m["away_score"] for m in matches),
+                "draws": sum(m["home_score"] == m["away_score"] for m in matches),
+                "close_matches": sum(abs(m["home_score"] - m["away_score"]) <= 7 for m in matches),
+            }
+            if any(stadium[key] != value for key, value in expected.items()):
+                raise ValueError(f"Stadium totals do not reconcile: {stadium['stadium_name']}")
+            average = sum(m["home_score"] + m["away_score"] for m in matches) / len(matches)
+            if abs(float(stadium["average_combined_points"]) - average) > 0.051:
+                raise ValueError(f"Stadium average does not reconcile: {stadium['stadium_name']}")
     event_points = sum(row["points"] for row in data["scoring_patterns"])
     match_points = sum(row["home_score"] + row["away_score"] for row in completed.values())
     return {
@@ -173,6 +224,8 @@ def validate_bundle(data):
         "listed_event_points": event_points,
         "final_score_points": match_points,
         "score_event_points_gap": match_points - event_points,
+        "matches_with_named_ground": len(ground_matches),
+        "matches_without_named_ground": len(completed) - len(ground_matches),
     }
 
 
@@ -204,6 +257,8 @@ def export_site_data(connection, output_dir):
         "quality": quality,
         "notes": ["Results unavailable in the source are not labelled upcoming.",
                   "Listed scoring events can be incomplete even when a final score exists.",
+                  "Ground matches use the listed home team; neutral venue status is unknown, so listed-home wins are not a measure of home advantage.",
+                  "Attendance is a per-match numeric value when supplied; coverage counts are not attendance totals.",
                   "Stadium coordinates have not yet been verified; no map points are exported."],
     }
     temporary_manifest = output_dir / "manifest.json.tmp"
